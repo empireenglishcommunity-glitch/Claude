@@ -517,3 +517,72 @@ Then tonight:
 3. Post message (or voice note) to Telegram. ✅ Promise kept.
 4. Handle replies with the Part B DM sales flow.
 5. This week: finish Discord, collect testimonials, prep the full TikTok playbook for the public launch.
+
+
+
+---
+
+## PART C.1 — FINAL READY-TO-POST TELEGRAM POST (with prices + date)
+
+**Cohort 1 start date: Saturday 27 June (Dubai time).**
+
+```
+🏛️ أهل الإمبراطورية... النهاردة بنفتح أبواب التأسيس — وانتوا الأول 👑
+
+انتوا معايا من البداية، عشان كده ليكوا أولوية الدخول قبل أي حد في العالم.
+
+Empire English مش كورس... ده نظام كامل بيخليك تتكلم إنجليزي بطلاقة:
+✅ مهام يومية منظّمة من الصفر لطلاقة زي الـ native
+✅ كوميونيتي ٢٤ ساعة + تصحيح بالـ AI
+✅ تدريب على اللكنة الأمريكية من أول يوم
+
+وعشان كل عضو ياخد اهتمام حقيقي، بنستقبلكوا على دفعات صغيرة (Cohorts).
+📅 دفعتكوا الأولى بتبدأ يوم السبت ٢٧ يونيو (بتوقيت دبي).
+
+━━━━━━━━━━━━━━
+👑 مميزات المؤسسين (Founding Members) — النهاردة بس:
+• سعرك ثابت للأبد ومش هيزيد مهما طلعت الأسعار
+• شارة Founder حصرية
+• Accent Bootcamp مجاني
+• أولوية الدخول قبل الجمهور
+━━━━━━━━━━━━━━
+
+💰 الأسعار (بتتظبط حسب بلدك — عدالة للجميع زي نتفليكس):
+
+🇪🇬 جوه مصر / شهريًا:
+• Recruit — ١٩٩ ج
+• Builder ⭐ — ٣٩٩ ج
+• Empire — ٧٩٩ ج
+• VIP (خاص ١-on-١) — ٣٬٥٠٠ ج
+
+🌍 برّه مصر / شهريًا:
+• Recruit — $19
+• Builder ⭐ — $39
+• Empire — $89
+• VIP (خاص ١-on-١) — $249
+
+💡 الاشتراك السنوي بيوفّرلك ٣٥٪ (تدفع ٨ شهور وتاخد ١٢).
+
+━━━━━━━━━━━━━━
+✅ جاهز دلوقتي بمجرد ما تحجز:
+• مجتمع المؤسسين على Telegram
+• اختبار تحديد المستوى — ابدأه النهاردة عشان نحطك في المستوى الصح
+• شارة ودور الـ Founder
+
+🚀 يوم السبت ٢٧ يونيو: النظام اليومي الكامل + منصة الكوميونيتي بتفتح لدفعتكوا.
+
+🛡️ ضمان استرجاع فلوسك خلال ٧ أيام — صفر مخاطرة.
+
+💳 طرق الدفع:
+• فودافون كاش: [رقمك]
+• إنستا باي: [الـ handle بتاعك]
+• PayPal (برّه مصر): [اللينك بتاعك]
+
+📩 ابعتلي كلمة EMPIRE هنا دلوقتي وهحجزلك مكانك من المؤسسين 👑
+```
+
+### Image hook prompt
+```
+Cinematic vertical poster, massive ornate golden empire gates slowly opening with bright golden light bursting through the gap, deep black and navy background, glowing gold particles floating in the air, a modern minimalist golden crown emblem centered above the gates, dramatic luxury atmosphere, lots of clean empty space at the top and bottom for text overlay, premium royal gold and black color scheme, ultra detailed, 4k, high contrast, elegant and powerful mood --ar 9:16
+```
+Canva text overlay: Top "🏛️ THE GATES OPEN" · Middle "Founding Members — Today Only" · Bottom "Cohort 1 starts Sat 27 June · DM EMPIRE 👑"
