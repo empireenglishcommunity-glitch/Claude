@@ -665,3 +665,23 @@ Footer on every card: 🏛️ سعر التأسيس ثابت للأبد · 🛡�
 
 📩 ابعتلي EMPIRE واسم الباقة وهحجزلك مكانك من المؤسسين 👑
 ```
+
+
+
+---
+
+## PART C.3 — READY-TO-PASTE CHATGPT (GPT-4o) IMAGE PROMPTS FOR THE 5 CARDS
+
+> Note: GPT-4o renders ENGLISH text well but GARBLES Arabic. So cards use English text; the Arabic album caption (Part C.2) carries full explanation. Always zoom in and verify spelling; ask ChatGPT to "regenerate and fix the text, keep everything else the same" if a word is wrong.
+
+**PROMPT 1 — OVERVIEW (gold)**: Premium vertical 4:5 card, brand "Empire English", matte black bg, royal gold accents, thin geometric gold lines, glowing gold crown at top, luxury SaaS look. Exact text: Title "EMPIRE ENGLISH — CHOOSE YOUR PATH"; tiers "RECRUIT — 199 EGP / $19", "BUILDER ⭐ — 399 EGP / $39 — MOST POPULAR", "EMPIRE — 799 EGP / $89", "VIP — 3,500 EGP / $249"; footer "Founding price locked forever · 7-day guarantee · DM EMPIRE".
+
+**PROMPT 2 — RECRUIT (bronze)**: header "RECRUIT"; tagline "Start the Journey"; "199 EGP / month · $19 / month"; "For: Beginners who want structure, no pressure"; Includes: Full daily learning system / Weekly AI cheat sheets / Level text & voice channels / Weekly assessment & progress / Points, streaks & leaderboard; quote "Start right. Build the daily habit."; CTA "DM EMPIRE"; footer "Founding price locked forever · 7-day guarantee".
+
+**PROMPT 3 — BUILDER (emerald-teal, MOST POPULAR ribbon)**: header "BUILDER ⭐"; tagline "Real Progress"; "399 EGP / month · $39 / month"; "For: Serious learners who want to actually speak"; Everything in Recruit, plus: AI feedback on speaking & writing / Full immersion library (movies & podcasts) / All daily voice sessions / Buddy & mentorship / Monthly review & level exams; quote "This is what makes you actually speak."; CTA "DM EMPIRE"; footer "Founding price locked forever · 7-day guarantee". Make it the most premium-looking.
+
+**PROMPT 4 — EMPIRE (rich gold)**: header "EMPIRE"; tagline "Faster + Personal"; "799 EGP / month · $89 / month"; "For: Ambitious learners with a goal"; Everything in Builder, plus: Priority human-reviewed feedback / 2 group coaching calls / month / Personal monthly plan + 1-on-1 review / Mastery Certification (Silver/Gold/Platinum) / Empire badge & status; quote "Faster results — you're not alone."; CTA "DM EMPIRE"; footer "Founding price locked forever · 7-day guarantee".
+
+**PROMPT 5 — VIP (royal purple + gold)**: header "VIP — INNER CIRCLE"; tagline "Your Personal Coach"; "3,500 EGP / month · $249 / month · Limited seats"; "For: Fast, personal transformation"; Everything in Empire, plus: 4 private 1-on-1 sessions / month / Unlimited 24h human feedback / Direct WhatsApp line to your coach / Fully custom roadmap to your goal / Before/after transformation tracking; quote "Like having a personal coach by your side."; CTA "DM EMPIRE"; footer "Limited seats · 7-day guarantee". Most exclusive/luxurious look.
+
+(Full verbatim copy-paste versions of these prompts were provided to the user in chat.)
