@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import RoyalBackground from '../../src/components/RoyalBackground';
+import BrandLogo from '../../src/components/BrandLogo';
 import EmpireCard from '../../src/components/EmpireCard';
 import OrnamentDivider from '../../src/components/OrnamentDivider';
 import SpeakerButton from '../../src/components/SpeakerButton';
@@ -59,9 +60,12 @@ export default function HomeScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <View>
-              <Text style={styles.brand}>{brand.name.toUpperCase()}</Text>
-              <Text style={styles.community}>ENGLISH COMMUNITY</Text>
+            <View style={styles.brandRow}>
+              <BrandLogo size={44} />
+              <View style={{ marginLeft: spacing.sm }}>
+                <Text style={styles.brand}>{brand.name.toUpperCase()}</Text>
+                <Text style={styles.community}>ENGLISH COMMUNITY</Text>
+              </View>
             </View>
             <Pressable style={styles.rankChip} onPress={() => router.push('/(tabs)/progress')}>
               <RankPill rank={rank.current} />
@@ -238,6 +242,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.lg,
   },
+  brandRow: { flexDirection: 'row', alignItems: 'center' },
   brand: {
     fontFamily: typography.serif,
     fontSize: 26,

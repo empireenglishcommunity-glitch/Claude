@@ -14,7 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import RoyalBackground from '../src/components/RoyalBackground';
-import EmpireLogo from '../src/components/EmpireLogo';
+import BrandLogo from '../src/components/BrandLogo';
 import GoldButton from '../src/components/GoldButton';
 import { brand, colors, spacing, typography } from '../src/theme';
 
@@ -43,7 +43,7 @@ export default function SplashGate() {
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
           <Animated.View entering={FadeInDown.duration(900)}>
-            <EmpireLogo size={150} />
+            <BrandLogo size={210} />
           </Animated.View>
 
           <Animated.Text entering={FadeIn.delay(700).duration(900)} style={styles.tagline}>
