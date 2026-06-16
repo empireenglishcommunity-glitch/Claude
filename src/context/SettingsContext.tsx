@@ -6,6 +6,7 @@ const LANG_KEY = 'empire.settings.lang';
 const VOICE_KEY = 'empire.settings.authenticVoice';
 const NAME_KEY = 'empire.profile.name';
 const PHOTO_KEY = 'empire.profile.photo';
+const AIKEY_KEY = 'empire.settings.aiKey';
 
 type SettingsContextValue = {
   language: Language;
@@ -19,6 +20,9 @@ type SettingsContextValue = {
   /** Local URI of the learner's profile photo, if set. */
   profilePhoto: string | null;
   setProfilePhoto: (uri: string | null) => void;
+  /** OpenAI API key — stored ONLY on the device, never in the repo. Powers AI features. */
+  aiKey: string;
+  setAiKey: (key: string) => void;
 };
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -28,6 +32,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [authenticVoice, setAuthentic] = useState<boolean>(false);
   const [profileName, setName] = useState<string>('');
   const [profilePhoto, setPhoto] = useState<string | null>(null);
+  const [aiKey, setAiKeyState] = useState<string>('');
 
   useEffect(() => {
     AsyncStorage.getItem(LANG_KEY).then((saved) => {
@@ -41,6 +46,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     });
     AsyncStorage.getItem(PHOTO_KEY).then((saved) => {
       if (saved) setPhoto(saved);
+    });
+    AsyncStorage.getItem(AIKEY_KEY).then((saved) => {
+      if (saved) setAiKeyState(saved);
     });
   }, []);
 
@@ -65,6 +73,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     else AsyncStorage.removeItem(PHOTO_KEY).catch(() => {});
   };
 
+  const setAiKey = (key: string) => {
+    setAiKeyState(key);
+    if (key.trim()) AsyncStorage.setItem(AIKEY_KEY, key.trim()).catch(() => {});
+    else AsyncStorage.removeItem(AIKEY_KEY).catch(() => {});
+  };
+
   const value = useMemo<SettingsContextValue>(
     () => ({
       language: getLanguage(code),
@@ -75,8 +89,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setProfileName,
       profilePhoto,
       setProfilePhoto,
+      aiKey,
+      setAiKey,
     }),
-    [code, authenticVoice, profileName, profilePhoto],
+    [code, authenticVoice, profileName, profilePhoto, aiKey],
   );
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;

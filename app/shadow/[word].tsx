@@ -20,12 +20,16 @@ import { colors, radii, spacing, typography } from '../../src/theme';
 import { lookupWord } from '../../src/services/dictionary';
 import { WordEntry } from '../../src/data/types';
 import { useProgress } from '../../src/context/ProgressContext';
+import { useSettings } from '../../src/context/SettingsContext';
+import { assessPronunciation, hasAiKey, PronunciationResult } from '../../src/services/ai';
 
 const SHADOW_XP = 8;
 
 export default function ShadowScreen() {
   const router = useRouter();
   const { addXp } = useProgress();
+  const { aiKey } = useSettings();
+  const aiEnabled = hasAiKey(aiKey);
   const params = useLocalSearchParams<{ word: string }>();
   const word = String(params.word ?? '').trim();
 
@@ -35,6 +39,8 @@ export default function ShadowScreen() {
   const [recording, setRecording] = useState(false);
   const [myUri, setMyUri] = useState<string | null>(null);
   const [rated, setRated] = useState(false);
+  const [assessing, setAssessing] = useState(false);
+  const [result, setResult] = useState<PronunciationResult | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -72,11 +78,33 @@ export default function ShadowScreen() {
       // ignore
     }
     setRecording(false);
-    setMyUri(recorder.uri ?? null);
+    const uri = recorder.uri ?? null;
+    setMyUri(uri);
     try {
       await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
     } catch {
       // ignore
+    }
+    if (uri && aiEnabled) runAssessment(uri);
+  };
+
+  const runAssessment = async (uri: string) => {
+    if (!entry || !aiEnabled) return;
+    setAssessing(true);
+    setResult(null);
+    const r = await assessPronunciation(entry.word, uri, aiKey);
+    setAssessing(false);
+    if (r) {
+      setResult(r);
+      const earned = SHADOW_XP + Math.round(r.score / 20); // up to +5 bonus
+      addXp(earned, 'Shadowing · تقييم AI');
+    } else {
+      setResult({
+        score: 0,
+        heard: '',
+        feedback: 'تعذّر الاتصال بالـ AI — اتأكد من الإنترنت ومن مفتاح OpenAI في الإعدادات.',
+        passed: false,
+      });
     }
   };
 
@@ -177,34 +205,86 @@ export default function ShadowScreen() {
             )}
           </EmpireCard>
 
-          {/* Step 3: self-rate */}
+          {/* Step 3: AI assessment (or self-rate fallback) */}
           {myUri && !recording && (
             <Animated.View entering={FadeInDown.duration(400)}>
-              <Text style={styles.stepLabel}>3 · How close were you? · قد إيه قربت؟</Text>
-              <EmpireCard>
-                <Text style={styles.rateHint}>قيّم نفسك بصراحة — وكل تقييم بيديك XP 👑</Text>
-                <View style={styles.starsRow}>
-                  {[
-                    { n: 1, label: 'Keep trying\nكمّل' },
-                    { n: 2, label: 'Getting there\nقربت' },
-                    { n: 3, label: 'Spot on!\nمظبوط' },
-                  ].map((opt) => (
-                    <Pressable
-                      key={opt.n}
-                      disabled={rated}
-                      style={[styles.starBox, rated && { opacity: 0.5 }]}
-                      onPress={() => finish(opt.n)}
-                    >
-                      <View style={styles.starIcons}>
-                        {Array.from({ length: opt.n }).map((_, i) => (
-                          <MaterialCommunityIcons key={i} name="star" size={18} color={colors.goldBright} />
-                        ))}
+              <Text style={styles.stepLabel}>3 · The verdict · التقييم</Text>
+
+              {aiEnabled ? (
+                <EmpireCard>
+                  {assessing ? (
+                    <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
+                      <ActivityIndicator color={colors.gold} size="large" />
+                      <Text style={styles.rateHint}>الذكاء الاصطناعي بيسمع نطقك ويقيّمه… 🤖</Text>
+                    </View>
+                  ) : result ? (
+                    <View style={{ alignItems: 'center' }}>
+                      <Text
+                        style={[
+                          styles.scoreNum,
+                          { color: result.passed ? colors.success : result.score >= 60 ? colors.gold : colors.danger },
+                        ]}
+                      >
+                        {result.score}
+                        <Text style={styles.scoreSlash}>/100</Text>
+                      </Text>
+                      <View style={[styles.verdictPill, result.passed && styles.verdictPass]}>
+                        <MaterialCommunityIcons
+                          name={result.passed ? 'check-decagram' : 'alert-circle-outline'}
+                          size={16}
+                          color={result.passed ? colors.success : colors.gold}
+                        />
+                        <Text style={[styles.verdictText, result.passed && { color: colors.success }]}>
+                          {result.passed ? 'نطق مظبوط!' : 'محتاج شغل بسيط'}
+                        </Text>
                       </View>
-                      <Text style={styles.starLabel}>{opt.label}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </EmpireCard>
+                      <Text style={styles.feedback}>{result.feedback}</Text>
+                      <GoldButton
+                        label="Try again · حاول تاني"
+                        icon="microphone"
+                        variant="outline"
+                        onPress={startRecording}
+                        style={{ marginTop: spacing.lg, alignSelf: 'stretch' }}
+                      />
+                      <GoldButton
+                        label="Done · تمام"
+                        icon="check"
+                        onPress={() => router.back()}
+                        style={{ marginTop: spacing.sm, alignSelf: 'stretch' }}
+                      />
+                    </View>
+                  ) : (
+                    <Text style={styles.rateHint}>اضغط التسجيل عشان الـ AI يقيّمك.</Text>
+                  )}
+                </EmpireCard>
+              ) : (
+                <EmpireCard>
+                  <Text style={styles.rateHint}>
+                    قيّم نفسك — أو فعّل تقييم الذكاء الاصطناعي من الإعدادات (مفتاح OpenAI) عشان يقيّمك بدقة 👑
+                  </Text>
+                  <View style={styles.starsRow}>
+                    {[
+                      { n: 1, label: 'Keep trying\nكمّل' },
+                      { n: 2, label: 'Getting there\nقربت' },
+                      { n: 3, label: 'Spot on!\nمظبوط' },
+                    ].map((opt) => (
+                      <Pressable
+                        key={opt.n}
+                        disabled={rated}
+                        style={[styles.starBox, rated && { opacity: 0.5 }]}
+                        onPress={() => finish(opt.n)}
+                      >
+                        <View style={styles.starIcons}>
+                          {Array.from({ length: opt.n }).map((_, i) => (
+                            <MaterialCommunityIcons key={i} name="star" size={18} color={colors.goldBright} />
+                          ))}
+                        </View>
+                        <Text style={styles.starLabel}>{opt.label}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </EmpireCard>
+              )}
             </Animated.View>
           )}
 
@@ -252,6 +332,30 @@ const styles = StyleSheet.create({
   },
   playMineText: { color: colors.gold, fontSize: typography.sizes.small, fontWeight: '700' },
   rateHint: { color: colors.textMuted, fontSize: typography.sizes.small, writingDirection: 'rtl', textAlign: 'center', marginBottom: spacing.md },
+  scoreNum: { fontFamily: typography.serif, fontSize: 56, fontWeight: '800' },
+  scoreSlash: { fontSize: typography.sizes.h3, color: colors.textMuted, fontWeight: '700' },
+  verdictPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.goldFaint,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.goldBorder,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    marginTop: spacing.sm,
+  },
+  verdictPass: { borderColor: colors.success, backgroundColor: 'rgba(63,176,122,0.12)' },
+  verdictText: { color: colors.gold, fontSize: typography.sizes.small, fontWeight: '800', writingDirection: 'rtl' },
+  feedback: {
+    color: colors.textPrimary,
+    fontSize: typography.sizes.body,
+    writingDirection: 'rtl',
+    textAlign: 'center',
+    lineHeight: 26,
+    marginTop: spacing.md,
+  },
   starsRow: { flexDirection: 'row', gap: spacing.sm },
   starBox: {
     flex: 1,

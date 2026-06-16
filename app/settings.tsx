@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -16,7 +16,7 @@ import { useAuth } from '../src/context/AuthContext';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { authenticVoice, setAuthenticVoice } = useSettings();
+  const { authenticVoice, setAuthenticVoice, aiKey, setAiKey } = useSettings();
   const { reset } = useProgress();
   const { configured, user, logOut } = useAuth();
 
@@ -97,7 +97,43 @@ export default function SettingsScreen() {
 
           <OrnamentDivider icon="crown" />
 
-          {/* Danger zone */}
+          {/* AI features */}
+          <Text style={styles.section}>AI Features · مميزات الذكاء الاصطناعي</Text>
+          <EmpireCard>
+            <View style={styles.row}>
+              <MaterialCommunityIcons name="robot" size={24} color={colors.gold} />
+              <View style={styles.rowText}>
+                <Text style={styles.rowTitle}>OpenAI API Key</Text>
+                <Text style={styles.rowSub}>
+                  بيفعّل تقييم النطق الذكي في Shadowing + الكلمات الذكية في خريطة الفتوحات.
+                </Text>
+              </View>
+            </View>
+            <TextInput
+              value={aiKey}
+              onChangeText={setAiKey}
+              placeholder="sk-..."
+              placeholderTextColor={colors.textMuted}
+              style={styles.keyInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+              secureTextEntry
+            />
+            <View style={styles.note}>
+              <MaterialCommunityIcons
+                name={aiKey.trim() ? 'check-decagram' : 'information-outline'}
+                size={14}
+                color={aiKey.trim() ? colors.success : colors.textMuted}
+              />
+              <Text style={styles.noteText}>
+                {aiKey.trim()
+                  ? 'مفعّل ✓ — المفتاح متخزّن على جهازك بس.'
+                  : 'اختياري. المفتاح بيتخزّن على جهازك فقط، مايترفعش لأي مكان.'}
+              </Text>
+            </View>
+          </EmpireCard>
+
+          <OrnamentDivider icon="crown" />
           <Text style={styles.section}>Account · الحساب</Text>
           {configured && user ? (
             <View style={styles.accountCard}>
@@ -149,6 +185,17 @@ const styles = StyleSheet.create({
   rowSub: { color: colors.textMuted, fontSize: typography.sizes.small, marginTop: 2, writingDirection: 'rtl', lineHeight: 20 },
   note: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.md, borderTopWidth: 1, borderTopColor: 'rgba(212,175,55,0.15)', paddingTop: spacing.md },
   noteText: { color: colors.textSecondary, fontSize: typography.sizes.small, writingDirection: 'rtl' },
+  keyInput: {
+    backgroundColor: colors.black,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.goldBorder,
+    color: colors.textPrimary,
+    fontSize: typography.sizes.body,
+    paddingHorizontal: spacing.md,
+    height: 46,
+    marginTop: spacing.md,
+  },
   dangerRow: {
     flexDirection: 'row',
     alignItems: 'center',
