@@ -12,11 +12,13 @@ import { speakAmerican } from '../src/services/speech';
 import { brand, colors, radii, spacing, typography } from '../src/theme';
 import { useSettings } from '../src/context/SettingsContext';
 import { useProgress } from '../src/context/ProgressContext';
+import { useAuth } from '../src/context/AuthContext';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { authenticVoice, setAuthenticVoice } = useSettings();
   const { reset } = useProgress();
+  const { configured, user, logOut } = useAuth();
 
   const previewVoice = (authentic: boolean) => {
     setAuthenticVoice(authentic);
@@ -97,6 +99,25 @@ export default function SettingsScreen() {
 
           {/* Danger zone */}
           <Text style={styles.section}>Account · الحساب</Text>
+          {configured && user ? (
+            <View style={styles.accountCard}>
+              <MaterialCommunityIcons name="account-circle" size={24} color={colors.gold} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.accountName}>{user.displayName || 'Citizen'}</Text>
+                <Text style={styles.accountEmail}>{user.email}</Text>
+              </View>
+              <Pressable
+                onPress={() => {
+                  logOut();
+                  router.replace('/');
+                }}
+                style={styles.signOutBtn}
+              >
+                <MaterialCommunityIcons name="logout" size={18} color={colors.gold} />
+                <Text style={styles.signOutText}>Sign out</Text>
+              </Pressable>
+            </View>
+          ) : null}
           <Pressable style={styles.dangerRow} onPress={confirmReset}>
             <MaterialCommunityIcons name="restore" size={22} color={colors.danger} />
             <Text style={styles.dangerText}>Reset my progress · إعادة ضبط التقدّم</Text>
@@ -139,6 +160,31 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   dangerText: { color: colors.danger, fontSize: typography.sizes.body, fontWeight: '700' },
+  accountCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.charcoal,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.goldBorder,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  accountName: { color: colors.textPrimary, fontSize: typography.sizes.body, fontWeight: '700' },
+  accountEmail: { color: colors.textMuted, fontSize: typography.sizes.small },
+  signOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.goldFaint,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.goldBorder,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+  },
+  signOutText: { color: colors.gold, fontSize: typography.sizes.small, fontWeight: '700' },
   brandBlock: { alignItems: 'center', marginTop: spacing.xxxl },
   brandName: { fontFamily: typography.serif, fontSize: typography.sizes.body, color: colors.goldSoft, letterSpacing: 2 },
   sponsorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm },

@@ -17,13 +17,15 @@ import RoyalBackground from '../src/components/RoyalBackground';
 import BrandLogo from '../src/components/BrandLogo';
 import GoldButton from '../src/components/GoldButton';
 import { brand, colors, spacing, typography } from '../src/theme';
+import { useAuth } from '../src/context/AuthContext';
 
 /**
  * Cinematic imperial gate: the throne-room opens, the emblem rises,
- * MacLempire sponsorship is honored, then the user enters the Empire.
+ * the sponsor is honored, then the user enters the Empire (or signs in).
  */
 export default function SplashGate() {
   const router = useRouter();
+  const { configured, user } = useAuth();
   const gateGlow = useSharedValue(0);
 
   useEffect(() => {
@@ -32,7 +34,10 @@ export default function SplashGate() {
 
   const glowStyle = useAnimatedStyle(() => ({ opacity: 0.15 + gateGlow.value * 0.35 }));
 
-  const enter = () => router.replace('/(tabs)');
+  const enter = () => {
+    if (configured && !user) router.replace('/auth');
+    else router.replace('/(tabs)');
+  };
 
   return (
     <RoyalBackground>

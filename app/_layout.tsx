@@ -6,6 +6,7 @@ import { Stack } from 'expo-router';
 import { colors } from '../src/theme';
 import { ProgressProvider } from '../src/context/ProgressContext';
 import { SettingsProvider } from '../src/context/SettingsContext';
+import { AuthProvider } from '../src/context/AuthContext';
 import XpToast from '../src/components/XpToast';
 
 export default function RootLayout() {
@@ -13,26 +14,29 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.black }}>
       <SafeAreaProvider>
         <SettingsProvider>
-          <ProgressProvider>
-            <StatusBar style="light" />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: colors.black },
-                animation: 'fade',
-              }}
-            >
-              <Stack.Screen name="index" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="word/[word]" options={{ animation: 'slide_from_right' }} />
-              <Stack.Screen name="learn/[word]" options={{ animation: 'slide_from_bottom' }} />
-              <Stack.Screen name="shadow/[word]" options={{ animation: 'slide_from_bottom' }} />
-              <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
-              <Stack.Screen name="bookmarks" options={{ animation: 'slide_from_right' }} />
-              <Stack.Screen name="browse" options={{ animation: 'slide_from_right' }} />
-            </Stack>
-            <XpToast />
-          </ProgressProvider>
+          <AuthProvider>
+            <ProgressProvider>
+              <StatusBar style="light" />
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: colors.black },
+                  animation: 'fade',
+                }}
+              >
+                <Stack.Screen name="index" />
+                <Stack.Screen name="auth" options={{ animation: 'fade' }} />
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="word/[word]" options={{ animation: 'slide_from_right' }} />
+                <Stack.Screen name="learn/[word]" options={{ animation: 'slide_from_bottom' }} />
+                <Stack.Screen name="shadow/[word]" options={{ animation: 'slide_from_bottom' }} />
+                <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
+                <Stack.Screen name="bookmarks" options={{ animation: 'slide_from_right' }} />
+                <Stack.Screen name="browse" options={{ animation: 'slide_from_right' }} />
+              </Stack>
+              <XpToast />
+            </ProgressProvider>
+          </AuthProvider>
         </SettingsProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
