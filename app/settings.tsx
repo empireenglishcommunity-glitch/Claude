@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   iconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   topTitle: { color: colors.textSecondary, fontSize: typography.sizes.tiny, letterSpacing: 3, fontWeight: '700' },
   content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
-  section: { color: colors.gold, fontSize: typography.sizes.small, fontWeight: '800', letterSpacing: 2, textTransform: 'uppercase', marginBottom: spacing.sm },
+  section: { color: colors.gold, fontSize: typography.sizes.small, fontWeight: '800', marginBottom: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   rowText: { flex: 1 },
   rowTitle: { color: colors.textPrimary, fontSize: typography.sizes.body, fontWeight: '700' },

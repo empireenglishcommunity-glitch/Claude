@@ -28,6 +28,8 @@ export default function RootLayout() {
               <Stack.Screen name="learn/[word]" options={{ animation: 'slide_from_bottom' }} />
               <Stack.Screen name="shadow/[word]" options={{ animation: 'slide_from_bottom' }} />
               <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="bookmarks" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="browse" options={{ animation: 'slide_from_right' }} />
             </Stack>
             <XpToast />
           </ProgressProvider>

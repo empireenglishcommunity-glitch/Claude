@@ -1,30 +1,47 @@
-import React, { useCallback } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 
 import RoyalBackground from '../../src/components/RoyalBackground';
 import EmpireCard from '../../src/components/EmpireCard';
-import RankBadge from '../../src/components/RankBadge';
+import RankBadge, { RankPill } from '../../src/components/RankBadge';
 import XPBar from '../../src/components/XPBar';
 import StreakFlame from '../../src/components/StreakFlame';
 import OrnamentDivider from '../../src/components/OrnamentDivider';
 import { brand, colors, radii, spacing, typography } from '../../src/theme';
 import { useProgress } from '../../src/context/ProgressContext';
+import { useSettings } from '../../src/context/SettingsContext';
 import { RANKS } from '../../src/data/ranks';
 import { BADGES, earnedBadges } from '../../src/data/badges';
 
 export default function ProgressScreen() {
   const router = useRouter();
   const { state, rank, registerActivity } = useProgress();
+  const { profileName, setProfileName, profilePhoto, setProfilePhoto } = useSettings();
 
   useFocusEffect(
     useCallback(() => {
       registerActivity();
     }, [registerActivity]),
   );
+
+  const pickPhoto = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.6,
+    });
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      setProfilePhoto(result.assets[0].uri);
+    }
+  };
 
   return (
     <RoyalBackground>
@@ -40,12 +57,33 @@ export default function ProgressScreen() {
             </Pressable>
           </View>
 
-          {/* Rank hero */}
+          {/* Profile + rank hero */}
           <Animated.View entering={FadeInDown.duration(450)}>
             <EmpireCard style={{ alignItems: 'center', marginTop: spacing.lg }}>
-              <RankBadge rank={rank.current} size={96} />
-              <Text style={styles.rankTitle}>{rank.current.title}</Text>
-              <Text style={styles.rankAr}>{rank.current.titleAr}</Text>
+              <Pressable onPress={pickPhoto} style={styles.avatarWrap}>
+                {profilePhoto ? (
+                  <Image source={{ uri: profilePhoto }} style={styles.avatar} />
+                ) : (
+                  <RankBadge rank={rank.current} size={96} />
+                )}
+                <View style={styles.cameraChip}>
+                  <MaterialCommunityIcons name="camera" size={14} color={colors.black} />
+                </View>
+              </Pressable>
+
+              <TextInput
+                value={profileName}
+                onChangeText={setProfileName}
+                placeholder="Your name · اسمك"
+                placeholderTextColor={colors.textMuted}
+                style={styles.nameInput}
+                maxLength={24}
+                textAlign="center"
+              />
+              <View style={{ marginTop: 4 }}>
+                <RankPill rank={rank.current} />
+              </View>
+
               <Text style={styles.xpTotal}>{state.xp} XP</Text>
               <View style={{ height: spacing.lg, alignSelf: 'stretch' }} />
               <View style={{ alignSelf: 'stretch' }}>
@@ -79,7 +117,7 @@ export default function ProgressScreen() {
 
           {/* Community leaderboard */}
           <Text style={styles.sectionTitle}>Community · ترتيب المجتمع</Text>
-          <Leaderboard userXp={state.xp} />
+          <Leaderboard userXp={state.xp} userName={profileName} />
 
           <OrnamentDivider icon="chess-rook" />
 
@@ -150,8 +188,9 @@ const FICTIONAL_MEMBERS: { name: string; xp: number }[] = [
   { name: 'Tariq', xp: 90 },
 ];
 
-function Leaderboard({ userXp }: { userXp: number }) {
-  const rows = [...FICTIONAL_MEMBERS, { name: 'You · أنت', xp: userXp, isUser: true }]
+function Leaderboard({ userXp, userName }: { userXp: number; userName: string }) {
+  const me = userName.trim() || 'You · أنت';
+  const rows = [...FICTIONAL_MEMBERS, { name: me, xp: userXp, isUser: true }]
     .map((m) => ({ ...m, isUser: 'isUser' in m ? (m as { isUser?: boolean }).isUser : false }))
     .sort((a, b) => b.xp - a.xp);
 
@@ -234,6 +273,29 @@ const styles = StyleSheet.create({
   screenAr: { color: colors.textMuted, fontSize: typography.sizes.small, writingDirection: 'rtl' },
   rankTitle: { fontFamily: typography.serif, fontSize: typography.sizes.title, color: colors.goldBright, fontWeight: '800', marginTop: spacing.md },
   rankAr: { color: colors.textSecondary, fontSize: typography.sizes.body, writingDirection: 'rtl' },
+  avatarWrap: { width: 100, height: 100, alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 96, height: 96, borderRadius: 48, borderWidth: 2, borderColor: colors.goldBright },
+  cameraChip: {
+    position: 'absolute',
+    bottom: 0,
+    right: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.goldBright,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.black,
+  },
+  nameInput: {
+    fontFamily: typography.serif,
+    fontSize: typography.sizes.title,
+    color: colors.goldBright,
+    fontWeight: '800',
+    marginTop: spacing.md,
+    minWidth: 160,
+  },
   xpTotal: { color: colors.gold, fontSize: typography.sizes.h3, fontWeight: '700', marginTop: spacing.sm },
   statsRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg },
   statBox: {

@@ -105,7 +105,7 @@ export const shadows = {
 export const brand = {
   name: 'Empire',
   community: 'Empire English Community',
-  sponsor: 'Sponsored by MacLempire',
+  sponsor: 'Sponsored by Macal Empire',
   tagline: 'Speak like an Emperor.',
 } as const;
 

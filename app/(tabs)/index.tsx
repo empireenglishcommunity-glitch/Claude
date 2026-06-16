@@ -147,10 +147,10 @@ export default function HomeScreen() {
             />
             <Tile
               title="Explore"
-              arabic="استكشف"
-              icon="compass-rose"
+              arabic="تصفّح القاموس"
+              icon="book-open-page-variant"
               gradient={gradients.purple}
-              onPress={() => goToWord('empire')}
+              onPress={() => router.push('/browse')}
             />
           </View>
           <View style={styles.tilesRow}>
@@ -159,14 +159,18 @@ export default function HomeScreen() {
               arabic="المحفوظات"
               icon="bookmark"
               gradient={gradients.crimson}
-              onPress={() => goToWord('knowledge')}
+              onPress={() => router.push('/bookmarks')}
             />
             <Tile
               title="Practice"
-              arabic="تدرّب"
+              arabic="تدرّب على كلمة"
               icon="school"
               gradient={gradients.emerald}
-              onPress={() => goToWord('practice')}
+              onPress={() => {
+                const pool = searchOfflineWords('', 100);
+                const pick = pool[Math.floor(Math.random() * pool.length)];
+                if (pick) router.push({ pathname: '/learn/[word]', params: { word: pick.word } });
+              }}
             />
           </View>
 

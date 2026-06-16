@@ -4,13 +4,21 @@ import { DEFAULT_LANGUAGE_CODE, getLanguage, Language } from '../data/languages'
 
 const LANG_KEY = 'empire.settings.lang';
 const VOICE_KEY = 'empire.settings.authenticVoice';
+const NAME_KEY = 'empire.profile.name';
+const PHOTO_KEY = 'empire.profile.photo';
 
 type SettingsContextValue = {
   language: Language;
   setLanguageCode: (code: string) => void;
-  /** When true, pronunciation uses the online "Authentic" neural voice (needs internet). */
+  /** When true, pronunciation uses the online "Authentic" voice (with a distinct fallback). */
   authenticVoice: boolean;
   setAuthenticVoice: (on: boolean) => void;
+  /** The learner's display name (shown in My Empire and the leaderboard). */
+  profileName: string;
+  setProfileName: (name: string) => void;
+  /** Local URI of the learner's profile photo, if set. */
+  profilePhoto: string | null;
+  setProfilePhoto: (uri: string | null) => void;
 };
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -18,6 +26,8 @@ const SettingsContext = createContext<SettingsContextValue | null>(null);
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [code, setCode] = useState<string>(DEFAULT_LANGUAGE_CODE);
   const [authenticVoice, setAuthentic] = useState<boolean>(false);
+  const [profileName, setName] = useState<string>('');
+  const [profilePhoto, setPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     AsyncStorage.getItem(LANG_KEY).then((saved) => {
@@ -25,6 +35,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     });
     AsyncStorage.getItem(VOICE_KEY).then((saved) => {
       if (saved != null) setAuthentic(saved === '1');
+    });
+    AsyncStorage.getItem(NAME_KEY).then((saved) => {
+      if (saved) setName(saved);
+    });
+    AsyncStorage.getItem(PHOTO_KEY).then((saved) => {
+      if (saved) setPhoto(saved);
     });
   }, []);
 
@@ -38,9 +54,29 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(VOICE_KEY, on ? '1' : '0').catch(() => {});
   };
 
+  const setProfileName = (name: string) => {
+    setName(name);
+    AsyncStorage.setItem(NAME_KEY, name).catch(() => {});
+  };
+
+  const setProfilePhoto = (uri: string | null) => {
+    setPhoto(uri);
+    if (uri) AsyncStorage.setItem(PHOTO_KEY, uri).catch(() => {});
+    else AsyncStorage.removeItem(PHOTO_KEY).catch(() => {});
+  };
+
   const value = useMemo<SettingsContextValue>(
-    () => ({ language: getLanguage(code), setLanguageCode, authenticVoice, setAuthenticVoice }),
-    [code, authenticVoice],
+    () => ({
+      language: getLanguage(code),
+      setLanguageCode,
+      authenticVoice,
+      setAuthenticVoice,
+      profileName,
+      setProfileName,
+      profilePhoto,
+      setProfilePhoto,
+    }),
+    [code, authenticVoice, profileName, profilePhoto],
   );
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;

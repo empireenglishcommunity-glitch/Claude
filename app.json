@@ -41,6 +41,12 @@
         {
           "microphonePermission": "Empire English uses your microphone for pronunciation practice (Shadowing)."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Empire English uses your photos so you can set a profile picture."
+        }
       ]
     ],
     "experiments": {

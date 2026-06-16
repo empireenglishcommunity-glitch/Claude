@@ -231,7 +231,7 @@ function WordContent({ entry }: { entry: WordEntry }) {
               <Text style={styles.example}>“{entry.example}”</Text>
               <SpeakerButton text={entry.example} size={44} />
             </View>
-            {entry.exampleArabic ? <Text style={styles.exampleAr}>{entry.exampleArabic}</Text> : null}
+            <ExampleTranslation entry={entry} />
           </EmpireCard>
         </Animated.View>
       ) : null}
@@ -311,6 +311,34 @@ function MeaningTranslation({ entry }: { entry: WordEntry }) {
   return (
     <Text style={[styles.arabic, !language.rtl && styles.ltrMeaning]}>{text}</Text>
   );
+}
+
+function ExampleTranslation({ entry }: { entry: WordEntry }) {
+  const { language } = useSettings();
+  const [text, setText] = useState<string | null>(
+    language.code === 'ar' ? entry.exampleArabic ?? null : null,
+  );
+
+  useEffect(() => {
+    let active = true;
+    if (language.code === 'ar') {
+      setText(entry.exampleArabic ?? null);
+      return;
+    }
+    if (!entry.example) {
+      setText(null);
+      return;
+    }
+    translateOnline(entry.example, language.code).then((res) => {
+      if (active) setText(res);
+    });
+    return () => {
+      active = false;
+    };
+  }, [language.code, entry]);
+
+  if (!text) return null;
+  return <Text style={[styles.exampleAr, !language.rtl && styles.ltrMeaning]}>{text}</Text>;
 }
 
 function NotesEditor({ word }: { word: string }) {

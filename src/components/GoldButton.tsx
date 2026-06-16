@@ -99,7 +99,6 @@ const styles = StyleSheet.create({
     color: colors.black,
     fontSize: typography.sizes.body,
     fontWeight: '800',
-    letterSpacing: 0.5,
   },
   labelOutline: { color: colors.gold },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },

@@ -4,11 +4,13 @@ import { createAudioPlayer, setAudioModeAsync, AudioPlayer } from 'expo-audio';
 /**
  * Pronunciation engine.
  *
- * Two voices:
- *  - OFFLINE (default): the device's built-in en-US voice via `expo-speech`.
- *  - AUTHENTIC (optional, online): a more natural neural voice streamed as audio.
+ *  - OFFLINE (default): the device's built-in en-US voice (a "male" voice when
+ *    available), pitched slightly lower. Works 100% offline.
+ *  - AUTHENTIC (toggle on): first tries a more natural ONLINE voice; if that
+ *    can't start quickly it falls back to a DISTINCT en-US voice (a "female"
+ *    voice when available), pitched slightly higher.
  *
- * Callers pick the voice with the `authentic` flag; everything else is uniform.
+ * The result: flipping the toggle always produces an audible change.
  */
 
 export type SpeechRate = 'slow' | 'normal';
@@ -26,34 +28,49 @@ export type SpeakOptions = {
   onError?: (e: unknown) => void;
 };
 
-/* --------------------------- OFFLINE device voice --------------------------- */
+/* ------------------------------ voice selection ------------------------------ */
 
-let cachedVoiceId: string | null | undefined;
+const FEMALE_HINTS = ['samantha', 'allison', 'ava', 'susan', 'karen', 'victoria', 'zoe', 'nicky', 'joelle', 'female', 'serena'];
+const MALE_HINTS = ['aaron', 'fred', 'daniel', 'tom', 'alex', 'albert', 'bruce', 'arthur', 'male', 'reed', 'rishi'];
 
-async function getAmericanVoiceId(): Promise<string | undefined> {
-  if (cachedVoiceId !== undefined) return cachedVoiceId ?? undefined;
+type VoicePair = { male?: string; female?: string };
+let cachedPair: VoicePair | null = null;
+
+async function getVoicePair(): Promise<VoicePair> {
+  if (cachedPair) return cachedPair;
   try {
     const voices = await Speech.getAvailableVoicesAsync();
     const enUS = voices.filter((v) => (v.language || '').toLowerCase().startsWith('en-us'));
-    const enhanced = enUS.find((v) => (v.quality as unknown as string) === 'Enhanced');
-    const chosen = enhanced ?? enUS[0];
-    cachedVoiceId = chosen ? chosen.identifier : null;
+    const byName = (hints: string[]) =>
+      enUS.find((v) => hints.some((h) => (v.name || '').toLowerCase().includes(h)))?.identifier;
+
+    let male = byName(MALE_HINTS);
+    let female = byName(FEMALE_HINTS);
+
+    // Ensure both are defined and distinct so the toggle is always audible.
+    if (!male) male = enUS[0]?.identifier;
+    if (!female) female = enUS.find((v) => v.identifier !== male)?.identifier ?? enUS[1]?.identifier ?? male;
+
+    cachedPair = { male, female };
   } catch {
-    cachedVoiceId = null;
+    cachedPair = {};
   }
-  return cachedVoiceId ?? undefined;
+  return cachedPair;
 }
 
+/* --------------------------- device voice playback --------------------------- */
+
 async function speakDevice(text: string, options: SpeakOptions): Promise<void> {
-  const { rate = 'normal', onStart, onDone, onError } = options;
+  const { rate = 'normal', authentic = false, onStart, onDone, onError } = options;
   try {
     const speaking = await Speech.isSpeakingAsync().catch(() => false);
     if (speaking) Speech.stop();
-    const voice = await getAmericanVoiceId();
+    const pair = await getVoicePair();
+    const voice = authentic ? pair.female : pair.male;
     Speech.speak(text, {
       language: 'en-US',
       voice,
-      pitch: 1.0,
+      pitch: authentic ? 1.12 : 0.9,
       rate: RATE_MAP[rate],
       onStart,
       onDone,
@@ -65,7 +82,7 @@ async function speakDevice(text: string, options: SpeakOptions): Promise<void> {
   }
 }
 
-/* --------------------------- AUTHENTIC online voice --------------------------- */
+/* --------------------------- authentic online voice -------------------------- */
 
 let authenticPlayer: AudioPlayer | null = null;
 let authenticToken = 0;
@@ -77,7 +94,6 @@ function ttsUrl(text: string): string {
   );
 }
 
-/** Split long text into <=190-char chunks at word boundaries for the TTS endpoint. */
 function chunkText(text: string, max = 190): string[] {
   const words = text.trim().split(/\s+/);
   const chunks: string[] = [];
@@ -105,6 +121,7 @@ function disposeAuthentic() {
   }
 }
 
+/** Try the online voice; if it doesn't begin playing quickly, fall back to a distinct device voice. */
 async function speakAuthentic(text: string, options: SpeakOptions): Promise<void> {
   const { onStart, onDone, onError } = options;
   const token = ++authenticToken;
@@ -119,9 +136,18 @@ async function speakAuthentic(text: string, options: SpeakOptions): Promise<void
   const chunks = chunkText(text);
   let index = 0;
   let started = false;
+  let fellBack = false;
+
+  const fallback = () => {
+    if (fellBack || token !== authenticToken) return;
+    fellBack = true;
+    disposeAuthentic();
+    // Distinct device voice so the user still hears the "authentic" change.
+    speakDevice(text, { ...options, authentic: true });
+  };
 
   const playNext = () => {
-    if (token !== authenticToken) return; // superseded by a newer request
+    if (token !== authenticToken) return;
     if (index >= chunks.length) {
       disposeAuthentic();
       onDone?.();
@@ -133,6 +159,7 @@ async function speakAuthentic(text: string, options: SpeakOptions): Promise<void
       const player = createAudioPlayer(url);
       authenticPlayer = player;
       const sub = player.addListener('playbackStatusUpdate', (status) => {
+        if (token !== authenticToken) return;
         if (!started && status.playing) {
           started = true;
           onStart?.();
@@ -148,30 +175,33 @@ async function speakAuthentic(text: string, options: SpeakOptions): Promise<void
         }
       });
       player.play();
-    } catch (e) {
-      disposeAuthentic();
-      onError?.(e);
+    } catch {
+      fallback();
     }
   };
+
+  // If the online voice hasn't started within ~1.3s, fall back to the device voice.
+  setTimeout(() => {
+    if (!started) fallback();
+  }, 1300);
 
   playNext();
 }
 
-/* --------------------------------- Public API --------------------------------- */
+/* --------------------------------- public API -------------------------------- */
 
-/** Speak English text in an American accent (device offline voice by default). */
 export async function speakAmerican(text: string, options: SpeakOptions = {}): Promise<void> {
   const clean = text.trim();
   if (!clean) return;
   if (options.authentic) {
     return speakAuthentic(clean, options);
   }
-  return speakDevice(clean, options);
+  return speakDevice(clean, { ...options, authentic: false });
 }
 
 export function stopSpeaking(): void {
   Speech.stop();
-  authenticToken++; // invalidate any in-flight authentic chain
+  authenticToken++;
   disposeAuthentic();
 }
 
