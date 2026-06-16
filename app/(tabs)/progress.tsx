@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -15,13 +15,16 @@ import OrnamentDivider from '../../src/components/OrnamentDivider';
 import { brand, colors, radii, spacing, typography } from '../../src/theme';
 import { useProgress } from '../../src/context/ProgressContext';
 import { useSettings } from '../../src/context/SettingsContext';
+import { useAuth } from '../../src/context/AuthContext';
 import { RANKS } from '../../src/data/ranks';
 import { BADGES, earnedBadges } from '../../src/data/badges';
+import { fetchTopUsers, syncMyScore, LeaderboardEntry } from '../../src/services/leaderboard';
 
 export default function ProgressScreen() {
   const router = useRouter();
   const { state, rank, registerActivity } = useProgress();
   const { profileName, setProfileName, profilePhoto, setProfilePhoto } = useSettings();
+  const { configured, user } = useAuth();
 
   useFocusEffect(
     useCallback(() => {
@@ -117,7 +120,12 @@ export default function ProgressScreen() {
 
           {/* Community leaderboard */}
           <Text style={styles.sectionTitle}>Community · ترتيب المجتمع</Text>
-          <Leaderboard userXp={state.xp} userName={profileName} />
+          <Leaderboard
+            userXp={state.xp}
+            userName={profileName}
+            configured={configured}
+            uid={user?.uid ?? null}
+          />
 
           <OrnamentDivider icon="chess-rook" />
 
@@ -188,19 +196,58 @@ const FICTIONAL_MEMBERS: { name: string; xp: number }[] = [
   { name: 'Tariq', xp: 90 },
 ];
 
-function Leaderboard({ userXp, userName }: { userXp: number; userName: string }) {
+function Leaderboard({
+  userXp,
+  userName,
+  configured,
+  uid,
+}: {
+  userXp: number;
+  userName: string;
+  configured: boolean;
+  uid: string | null;
+}) {
   const me = userName.trim() || 'You · أنت';
-  const rows = [...FICTIONAL_MEMBERS, { name: me, xp: userXp, isUser: true }]
-    .map((m) => ({ ...m, isUser: 'isUser' in m ? (m as { isUser?: boolean }).isUser : false }))
-    .sort((a, b) => b.xp - a.xp);
+  const [rows, setRows] = useState<{ id: string; name: string; xp: number; isUser: boolean }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const live = configured && !!uid;
 
-  const medal = (i: number) =>
-    i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      if (live && uid) {
+        setLoading(true);
+        // Push my latest score, then read the real top players.
+        syncMyScore(uid, me, userXp).then(() => {
+          fetchTopUsers(20).then((entries: LeaderboardEntry[]) => {
+            if (!active) return;
+            setRows(entries.map((e) => ({ ...e, isUser: e.id === uid })));
+            setLoading(false);
+          });
+        });
+      } else {
+        // Demo ranking (until the learner signs in).
+        const demo = [...FICTIONAL_MEMBERS, { name: me, xp: userXp }]
+          .map((m, i) => ({ id: String(i), name: m.name, xp: m.xp, isUser: m.name === me }))
+          .sort((a, b) => b.xp - a.xp);
+        setRows(demo);
+      }
+      return () => {
+        active = false;
+      };
+    }, [live, uid, me, userXp]),
+  );
+
+  const medal = (i: number) => (i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`);
+
+  if (loading) {
+    return <ActivityIndicator color={colors.gold} style={{ marginVertical: spacing.lg }} />;
+  }
 
   return (
     <View>
       {rows.map((m, i) => (
-        <View key={m.name} style={[styles.lbRow, m.isUser && styles.lbRowUser]}>
+        <View key={m.id} style={[styles.lbRow, m.isUser && styles.lbRowUser]}>
           <Text style={styles.lbRank}>{medal(i)}</Text>
           <Text style={[styles.lbName, m.isUser && styles.lbNameUser]} numberOfLines={1}>
             {m.name}
@@ -208,7 +255,9 @@ function Leaderboard({ userXp, userName }: { userXp: number; userName: string })
           <Text style={styles.lbXp}>{m.xp} XP</Text>
         </View>
       ))}
-      <Text style={styles.lbNote}>ترتيب تجريبي للمجتمع — هيتفعّل أونلاين قريبًا.</Text>
+      <Text style={styles.lbNote}>
+        {live ? 'ترتيب حقيقي للمجتمع 🌍' : 'ترتيب تجريبي — سجّل دخولك عشان تدخل الترتيب الحقيقي.'}
+      </Text>
     </View>
   );
 }
