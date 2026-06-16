@@ -30,8 +30,15 @@ export default function ProgressScreen() {
     <RoyalBackground>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={styles.screenTitle}>My Empire</Text>
-          <Text style={styles.screenAr}>إمبراطوريتي</Text>
+          <View style={styles.headerRow}>
+            <View>
+              <Text style={styles.screenTitle}>My Empire</Text>
+              <Text style={styles.screenAr}>إمبراطوريتي</Text>
+            </View>
+            <Pressable style={styles.gearBtn} onPress={() => router.push('/settings')} hitSlop={10}>
+              <MaterialCommunityIcons name="cog" size={22} color={colors.gold} />
+            </Pressable>
+          </View>
 
           {/* Rank hero */}
           <Animated.View entering={FadeInDown.duration(450)}>
@@ -67,6 +74,12 @@ export default function ProgressScreen() {
           {/* Achievements */}
           <Text style={styles.sectionTitle}>Achievements · الأوسمة</Text>
           <BadgesGrid earned={earnedBadges(state)} />
+
+          <OrnamentDivider icon="trophy-variant" />
+
+          {/* Community leaderboard */}
+          <Text style={styles.sectionTitle}>Community · ترتيب المجتمع</Text>
+          <Leaderboard userXp={state.xp} />
 
           <OrnamentDivider icon="chess-rook" />
 
@@ -126,6 +139,41 @@ export default function ProgressScreen() {
   );
 }
 
+const FICTIONAL_MEMBERS: { name: string; xp: number }[] = [
+  { name: 'Cleopatra', xp: 1280 },
+  { name: 'Caesar', xp: 940 },
+  { name: 'Saladin', xp: 760 },
+  { name: 'Khalid', xp: 540 },
+  { name: 'Zenobia', xp: 410 },
+  { name: 'Hannibal', xp: 300 },
+  { name: 'Nefertiti', xp: 180 },
+  { name: 'Tariq', xp: 90 },
+];
+
+function Leaderboard({ userXp }: { userXp: number }) {
+  const rows = [...FICTIONAL_MEMBERS, { name: 'You · أنت', xp: userXp, isUser: true }]
+    .map((m) => ({ ...m, isUser: 'isUser' in m ? (m as { isUser?: boolean }).isUser : false }))
+    .sort((a, b) => b.xp - a.xp);
+
+  const medal = (i: number) =>
+    i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
+
+  return (
+    <View>
+      {rows.map((m, i) => (
+        <View key={m.name} style={[styles.lbRow, m.isUser && styles.lbRowUser]}>
+          <Text style={styles.lbRank}>{medal(i)}</Text>
+          <Text style={[styles.lbName, m.isUser && styles.lbNameUser]} numberOfLines={1}>
+            {m.name}
+          </Text>
+          <Text style={styles.lbXp}>{m.xp} XP</Text>
+        </View>
+      ))}
+      <Text style={styles.lbNote}>ترتيب تجريبي للمجتمع — هيتفعّل أونلاين قريبًا.</Text>
+    </View>
+  );
+}
+
 function BadgesGrid({ earned }: { earned: Set<string> }) {
   return (
     <View style={styles.badgesGrid}>
@@ -153,6 +201,35 @@ function BadgesGrid({ earned }: { earned: Set<string> }) {
 
 const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  gearBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.goldBorder,
+    backgroundColor: colors.goldFaint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lbRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.charcoal,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.12)',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  lbRowUser: { borderColor: colors.goldBright, backgroundColor: colors.goldFaint },
+  lbRank: { color: colors.goldSoft, fontSize: typography.sizes.body, fontWeight: '800', width: 28 },
+  lbName: { flex: 1, color: colors.textPrimary, fontSize: typography.sizes.body },
+  lbNameUser: { color: colors.goldBright, fontWeight: '800' },
+  lbXp: { color: colors.gold, fontSize: typography.sizes.small, fontWeight: '700' },
+  lbNote: { color: colors.textMuted, fontSize: typography.sizes.tiny, writingDirection: 'rtl', textAlign: 'center', marginTop: 4 },
   screenTitle: { fontFamily: typography.serif, fontSize: typography.sizes.title, color: colors.goldBright, fontWeight: '800' },
   screenAr: { color: colors.textMuted, fontSize: typography.sizes.small, writingDirection: 'rtl' },
   rankTitle: { fontFamily: typography.serif, fontSize: typography.sizes.title, color: colors.goldBright, fontWeight: '800', marginTop: spacing.md },

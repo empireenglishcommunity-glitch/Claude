@@ -26,6 +26,8 @@ export default function RootLayout() {
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="word/[word]" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="learn/[word]" options={{ animation: 'slide_from_bottom' }} />
+              <Stack.Screen name="shadow/[word]" options={{ animation: 'slide_from_bottom' }} />
+              <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
             </Stack>
             <XpToast />
           </ProgressProvider>

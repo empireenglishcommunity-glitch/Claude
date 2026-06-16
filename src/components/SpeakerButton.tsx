@@ -12,6 +12,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, gradients, shadows } from '../theme';
 import { speakAmerican, SpeechRate } from '../services/speech';
+import { useSettings } from '../context/SettingsContext';
 
 type Props = {
   text: string;
@@ -21,6 +22,7 @@ type Props = {
 
 /** A circular gold speaker that pulses while the American voice plays. */
 export default function SpeakerButton({ text, rate = 'normal', size = 64 }: Props) {
+  const { authenticVoice } = useSettings();
   const [speaking, setSpeaking] = useState(false);
   const pulse = useSharedValue(0);
 
@@ -45,6 +47,7 @@ export default function SpeakerButton({ text, rate = 'normal', size = 64 }: Prop
   const handlePress = () => {
     speakAmerican(text, {
       rate,
+      authentic: authenticVoice,
       onStart: () => setSpeaking(true),
       onDone: () => setSpeaking(false),
       onError: () => setSpeaking(false),

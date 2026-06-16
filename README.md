@@ -87,5 +87,8 @@ src/
 - ✅ **Phase 3 — The Full Empire:** Conquest Map (themed provinces that unlock as you
   master words), Achievements/Badges, and multi-language translation (Arabic offline +
   12 world languages online, chosen via the in-word Language Picker).
-- ⏭️ **Next:** Shadowing (record your voice & compare — needs microphone), an optional
-  online "Authentic Voice" (neural American TTS), and a community leaderboard.
+- ✅ **Phase 4 — Voice & Community:** optional online **Authentic Voice** (more natural
+  American TTS, toggle in Settings), **Shadowing** (record your voice, play it back, and
+  self-rate to earn XP), a **Settings** screen, and a **community leaderboard**.
+- ⏭️ **Next:** a real backend for the leaderboard, automatic pronunciation scoring
+  (speech-to-text), and publishing to the App Store / Play Store.

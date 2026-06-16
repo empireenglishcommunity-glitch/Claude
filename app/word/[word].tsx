@@ -164,12 +164,19 @@ function WordContent({ entry }: { entry: WordEntry }) {
         </LinearGradient>
       </Animated.View>
 
-      {/* Learn CTA */}
+      {/* Learn + Shadow CTAs */}
       <Animated.View entering={FadeIn.delay(100).duration(450)} style={styles.block}>
         <GoldButton
           label="Learn this word  ·  اتعلم الكلمة دي"
           icon="school"
           onPress={() => router.push({ pathname: '/learn/[word]', params: { word: entry.word } })}
+        />
+        <GoldButton
+          label="Shadowing  ·  سجّل وقارن نطقك"
+          icon="microphone"
+          variant="outline"
+          onPress={() => router.push({ pathname: '/shadow/[word]', params: { word: entry.word } })}
+          style={{ marginTop: spacing.md }}
         />
       </Animated.View>
       <Animated.View entering={FadeIn.delay(150).duration(450)} style={styles.block}>

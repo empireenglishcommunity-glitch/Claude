@@ -15,10 +15,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.maclempire.empireenglish"
+      "bundleIdentifier": "com.maclempire.empireenglish",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Empire English uses your microphone for pronunciation practice (Shadowing)."
+      }
     },
     "android": {
       "package": "com.maclempire.empireenglish",
+      "permissions": ["android.permission.RECORD_AUDIO"],
       "adaptiveIcon": {
         "backgroundColor": "#0B0B0B",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -31,7 +35,13 @@
       "bundler": "metro"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Empire English uses your microphone for pronunciation practice (Shadowing)."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

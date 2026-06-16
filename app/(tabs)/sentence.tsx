@@ -18,6 +18,7 @@ import GoldButton from '../../src/components/GoldButton';
 import SectionLabel from '../../src/components/SectionLabel';
 import { brand, colors, radii, spacing, typography } from '../../src/theme';
 import { speakAmerican, stopSpeaking, SpeechRate } from '../../src/services/speech';
+import { useSettings } from '../../src/context/SettingsContext';
 
 const STARTERS = [
   'Practice makes perfect.',
@@ -28,6 +29,7 @@ const STARTERS = [
 ];
 
 export default function SentenceScreen() {
+  const { authenticVoice } = useSettings();
   const [text, setText] = useState('');
   const [rate, setRate] = useState<SpeechRate>('normal');
   const [speaking, setSpeaking] = useState(false);
@@ -38,6 +40,7 @@ export default function SentenceScreen() {
     Keyboard.dismiss();
     speakAmerican(target, {
       rate,
+      authentic: authenticVoice,
       onStart: () => setSpeaking(true),
       onDone: () => setSpeaking(false),
       onError: () => setSpeaking(false),
