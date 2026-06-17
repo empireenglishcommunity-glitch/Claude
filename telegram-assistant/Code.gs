@@ -133,19 +133,21 @@ function handleCallback(cq){
 }
 
 function generateDraft(userMsg){
-  const model = 'gemini-2.0-flash';  // updated model (2026)
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + GEMINI_KEY;
-  const body = { contents: [{ parts: [{ text: KNOWLEDGE + '\n\nرسالة العميل: ' + userMsg + '\n\nاكتب الرد المناسب:' }]}] };
-  try{
-    const res = UrlFetchApp.fetch(url, {method:'post', contentType:'application/json', payload: JSON.stringify(body), muteHttpExceptions:true});
-    const code = res.getResponseCode();
-    const txt = res.getContentText();
-    if (code !== 200) return '[HUMAN] (AI error ' + code + ': ' + txt.substring(0,200) + ')';
-    const j = JSON.parse(txt);
-    return j.candidates[0].content.parts[0].text.trim();
-  } catch(err){
-    return '[HUMAN] (AI exception: ' + err + ')';
+  const models = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'];
+  const prompt = KNOWLEDGE + '\n\nرسالة العميل: ' + userMsg + '\n\nاكتب الرد المناسب:';
+  const body = JSON.stringify({ contents: [{ parts: [{ text: prompt }]}] });
+  let lastErr = '';
+  for (let i = 0; i < models.length; i++){
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + models[i] + ':generateContent?key=' + GEMINI_KEY;
+    try{
+      const res = UrlFetchApp.fetch(url, {method:'post', contentType:'application/json', payload: body, muteHttpExceptions:true});
+      const code = res.getResponseCode();
+      const txt = res.getContentText();
+      if (code === 200) return JSON.parse(txt).candidates[0].content.parts[0].text.trim();
+      lastErr = code + ': ' + txt.substring(0,120);
+    } catch(err){ lastErr = '' + err; }
   }
+  return '[HUMAN] (AI مش متاح دلوقتي — ' + lastErr + '. اكتب الرد بإيدك من زر ✏️ تعديل، أو جرّب بعد دقيقة)';
 }
 
 function setWebhook(){ Logger.log(tg('setWebhook', {url: ScriptApp.getService().getUrl()}).getContentText()); }
