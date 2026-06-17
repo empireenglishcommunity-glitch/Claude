@@ -174,6 +174,15 @@ async function onMessage(msg, env){
 
   // ---- Admin ----
   if (fromId === String(ADMIN_CHAT_ID)){
+    if (text === "/kv"){
+      if (env && env.KV){
+        const arr = (await env.KV.get("LEARNED", "json")) || [];
+        await tg("sendMessage", {chat_id: ADMIN_CHAT_ID, text: "✅ الذاكرة (KV) متصلة وشغّالة. عدد الإجابات المتعلّمة: " + arr.length});
+      } else {
+        await tg("sendMessage", {chat_id: ADMIN_CHAT_ID, text: "❌ الذاكرة (KV) مش متصلة!\nروح Settings → Bindings → Add → KV namespace، خلي الاسم بالظبط KV، واعمل Deploy. من غير كده مفيش تعلّم."});
+      }
+      return;
+    }
     const rt = msg.reply_to_message;
     if (rt && rt.text){
       // Reply + Teach (unknown question)
