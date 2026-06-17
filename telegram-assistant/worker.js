@@ -18,7 +18,7 @@ const PAY = {
 };
 // ===========================
 
-const VERSION = "v12";
+const VERSION = "v13";
 const MARK = "💰 محتوى دفع للمراجعة (وافق قبل الإرسال):\n";
 const EDITMARK = "✏️ اكتب ردك للعميل (id: ";
 const LEARNMARK = "🧠 اكتب الرد وهحفظه للمرة الجاية (id: ";
@@ -94,12 +94,12 @@ const ANSWERS = [
 ];
 
 export default {
-  async fetch(req, env){
+  async fetch(req, env, ctx){
     if (req.method !== "POST") return new Response("Empire English bot ✅ " + VERSION);
     let u; try { u = await req.json(); } catch(e){ return new Response("ok"); }
     try {
       if (u.callback_query) await onCallback(u.callback_query, env);
-      else if (u.message)   await onMessage(u.message, env);
+      else if (u.message)   await onMessage(u.message, env, ctx);
     } catch(err){ await tg("sendMessage",{chat_id:ADMIN_CHAT_ID, text:"⚠️ خطأ: "+err}); }
     return new Response("ok");
   },
@@ -130,6 +130,7 @@ async function tg(method, payload){
 }
 function K(rows){ return {inline_keyboard: rows}; }
 function B(t,d){ return {text:t, callback_data:d}; }
+function bg(ctx, p){ if (ctx && ctx.waitUntil) ctx.waitUntil(p); else return p; }
 function norm(s){ return (s||"").toString().toLowerCase().replace(/[\u064B-\u0652\u0670]/g,"").replace(/\u0640/g,"").replace(/[أإآ]/g,"ا").replace(/ى/g,"ي").replace(/ة/g,"ه").replace(/\s+/g," ").trim(); }
 
 function view(name){
@@ -141,10 +142,11 @@ function view(name){
     [B("🥉 Recruit","p:recruit"), B("🥈 Builder ⭐","p:builder")],
     [B("🥇 Empire","p:empire"), B("👑 VIP","p:vip")],
     [B("👑 عايز أشترك","m:sub"), B("↩️ رجوع","m:main")] ]) };
-  if (name === "compare") return { text:"عايز تقارن بين إيه؟ 🆚", kb:K([
-    [B("Recruit و Builder","cmp:rb"), B("Builder و Empire","cmp:be")],
-    [B("Empire و VIP","cmp:ev"), B("📊 قارن الكل","cmp:all")],
-    [B("↩️ رجوع","m:main")] ]) };
+  if (name === "compare") return { text:"عايز تقارن بين أنهي باقتين؟ 🆚", kb:K([
+    [B("Recruit ⚔️ Builder","cmp:rb"), B("Recruit ⚔️ Empire","cmp:re")],
+    [B("Recruit ⚔️ VIP","cmp:rv"), B("Builder ⚔️ Empire","cmp:be")],
+    [B("Builder ⚔️ VIP","cmp:bv"), B("Empire ⚔️ VIP","cmp:ev")],
+    [B("📊 قارن الكل","cmp:all"), B("↩️ رجوع","m:main")] ]) };
   if (name === "help") return { text:"إيه أقرب حاجة ليك؟ وأنا أرشّحلك الباقة المثالية 🎯", kb:K([
     [B("💰 ميزانيتي محدودة","rec:budget")],
     [B("🗣️ عايز أتكلم بثقة","rec:speak")],
@@ -169,10 +171,13 @@ const PKG = {
   vip:`باقة VIP 👑 — ٣٥٠٠ج / ٢٤٩$ شهريًا (أماكن محدودة)\n✅ كل مميزات Empire\n✅ ٤ جلسات خاصة فردية شهريًا\n✅ تصحيح غير محدود\n✅ تواصل مباشر على واتساب\n«كأن معاك مدرّب خاص» 🔥`
 };
 const CMP = {
-  rb:`Recruit و Builder:\n🥉 Recruit = النظام اليومي بمفردك.\n🥈 Builder = + تصحيح كلامك بالذكاء الاصطناعي + كل الجلسات الصوتية + مكتبة.\nالفرق إنك تتكلم فعلاً 🔥`,
-  be:`Builder و Empire:\n🥈 Builder = تتكلم بثقة وسط المجموعة.\n🥇 Empire = + تدريب جماعي + خطة شخصية + مراجعة فردية + شهادات.\nنتيجة أسرع 👑`,
-  ev:`Empire و VIP:\n🥇 Empire = تدريب جماعي.\n👑 VIP = + ٤ جلسات خاصة فردية + تصحيح غير محدود + تواصل مباشر.\nأقصى اهتمام شخصي 🔥`,
-  all:`📊 مقارنة سريعة:\n🥉 Recruit — البداية\n🥈 Builder ⭐ — الأكثر اختيارًا (تتكلم فعلاً)\n🥇 Empire — أسرع + اهتمام شخصي\n👑 VIP — مدرّب خاص\nأغلب الناس بيبدأوا بـ Builder 👑`
+  rb:`⚔️ Recruit ضد Builder\n\n🥉 Recruit (١٩٩ج/١٩$): نظام يومي + ملخصات + تقييم أسبوعي — بتذاكر بمفردك بنظام منظّم.\n🥈 Builder (٣٩٩ج/٣٩$): كل ده + تصحيح كلامك بالذكاء الاصطناعي + كل الجلسات الصوتية اليومية (بتتكلم فعلاً) + مكتبة + اختبارات ترقية.\n\n📌 الخلاصة: لو عايز تتكلم وتتدرّب مع ناس، Builder هو الفرق الحقيقي 🔥`,
+  re:`⚔️ Recruit ضد Empire\n\n🥉 Recruit (١٩٩ج/١٩$): مذاكرة ذاتية بنظام منظّم.\n🥇 Empire (٧٩٩ج/٨٩$): النظام + تصحيح بالذكاء الاصطناعي + كل الجلسات + كوتشينج جماعي + خطة شخصية + مراجعة فردية + شهادات.\n\n📌 الخلاصة: Recruit يخليك تذاكر، Empire يخليك توصل بسرعة وباهتمام شخصي 👑`,
+  rv:`⚔️ Recruit ضد VIP\n\n🥉 Recruit (١٩٩ج/١٩$): تبدأ بمفردك.\n👑 VIP (٣٥٠٠ج/٢٤٩$): كل حاجة + ٤ جلسات خاصة فردية شهريًا + تصحيح غير محدود + واتساب مباشر + خطة مخصصة بالكامل.\n\n📌 الخلاصة: من «تذاكر لوحدك» لـ «مدرّب خاص ماشي معاك» — أقصى فرق ممكن 🔥`,
+  be:`⚔️ Builder ضد Empire\n\n🥈 Builder (٣٩٩ج/٣٩$): تتكلم بثقة وسط المجموعة + تصحيح بالذكاء الاصطناعي.\n🥇 Empire (٧٩٩ج/٨٩$): كل ده + كوتشينج جماعي + خطة شخصية + مراجعة فردية + شهادات.\n\n📌 الخلاصة: Empire بيضيف اللمسة البشرية والخطة الشخصية = نتيجة أسرع 👑`,
+  bv:`⚔️ Builder ضد VIP\n\n🥈 Builder (٣٩٩ج/٣٩$): تدريب جماعي + تصحيح بالذكاء الاصطناعي.\n👑 VIP (٣٥٠٠ج/٢٤٩$): كل ده + ٤ جلسات خاصة فردية + تصحيح غير محدود + واتساب مباشر + خطة مخصصة.\n\n📌 الخلاصة: Builder جماعي وقيمته عالية، VIP خصوصي وأقصى سرعة واهتمام 🔥`,
+  ev:`⚔️ Empire ضد VIP\n\n🥇 Empire (٧٩٩ج/٨٩$): كوتشينج جماعي + خطة شخصية + مراجعة فردية.\n👑 VIP (٣٥٠٠ج/٢٤٩$): جلسات خاصة فردية بالكامل + تصحيح غير محدود + تواصل مباشر يومي.\n\n📌 الخلاصة: Empire اهتمام وسط مجموعة صغيرة، VIP كل التركيز عليك إنت لوحدك 👑`,
+  all:`📊 مقارنة كاملة:\n🥉 Recruit (١٩٩ج) — البداية: نظام يومي + ملخصات.\n🥈 Builder (٣٩٩ج) — الأكثر اختيارًا: + تصحيح بالذكاء الاصطناعي + جلسات صوتية + مكتبة.\n🥇 Empire (٧٩٩ج) — أسرع: + كوتشينج + خطة شخصية + شهادات.\n👑 VIP (٣٥٠٠ج) — مدرّب خاص: + جلسات فردية + تصحيح غير محدود + واتساب.\n\nأغلب الناس بيبدأوا بـ Builder ⭐👑`
 };
 const REC = {
   budget:["recruit","ميزانيتك محدودة؟ باقة Recruit 🥉 بداية ممتازة، وتقدر ترفّع باقتك بعدين 👑"],
@@ -207,7 +212,7 @@ async function requestPayment(env, custId, name, pkg){
   await touch(env, custId, name, "intent");
 }
 
-async function onMessage(msg, env){
+async function onMessage(msg, env, ctx){
   const chatId = msg.chat.id;
   const fromId = String(msg.from.id);
   const text = msg.text || "";
@@ -251,7 +256,7 @@ async function onMessage(msg, env){
   }
   if (text === "/start"){ await touch(env,chatId,name,"engaged"); const v=view("main"); await tg("sendMessage",{chat_id:chatId,text:v.text,reply_markup:v.kb}); return; }
 
-  await touch(env, chatId, name, "engaged");
+  bg(ctx, touch(env, chatId, name, "engaged"));
   let item = matchStatic(text);
   if (!item){ const l = await matchLearned(text, env); if (l) item = {reply:l}; }
 
@@ -313,7 +318,10 @@ async function onCallback(cq, env){
   const [pre, arg] = data.split(":");
   async function show(v){ await tg("editMessageText",{chat_id:chatId, message_id:cq.message.message_id, text:v.text, reply_markup:v.kb}).catch(async()=>{ await tg("sendMessage",{chat_id:chatId, text:v.text, reply_markup:v.kb}); }); }
 
-  if (pre === "m"){ const v=view(arg); if(v){ await show(v); await touch(env,chatId,name, arg==="pay"||arg==="sub"?"intent":(arg==="compare"||arg==="packages"||arg==="help"?"considering":"engaged")); } }
+  if (pre === "m"){
+    if (arg === "pay"){ await requestPayment(env, chatId, name, null); }
+    else { const v=view(arg); if(v){ await show(v); await touch(env,chatId,name, arg==="sub"?"intent":(arg==="compare"||arg==="packages"||arg==="help"?"considering":"engaged")); } }
+  }
   else if (pre === "p"){ await show({text:PKG[arg]||"—", kb:K([[B("👑 اشترك في دي","buy:"+(arg.charAt(0).toUpperCase()+arg.slice(1)))],[B("🆚 قارن","m:compare"), B("↩️ رجوع","m:packages")]])}); await touch(env,chatId,name,"considering"); }
   else if (pre === "cmp"){ await show({text:CMP[arg]||"—", kb:K([[B("👑 عايز أشترك","m:sub"), B("↩️ رجوع","m:compare")]])}); await touch(env,chatId,name,"considering"); }
   else if (pre === "rec"){ const r=REC[arg]; if(r){ await show({text:r[1]+"\n\n"+PKG[r[0]], kb:K([[B("👑 اشترك في دي","buy:"+(r[0].charAt(0).toUpperCase()+r[0].slice(1)))],[B("↩️ رجوع","m:help")]])}); await touch(env,chatId,name,"considering"); } }
