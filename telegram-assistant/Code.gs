@@ -11,7 +11,7 @@
 
 function P(k){ return PropertiesService.getScriptProperties().getProperty(k); }
 const TELEGRAM_TOKEN = P('TELEGRAM_TOKEN');
-const GEMINI_KEY     = P('GEMINI_KEY');
+const GROQ_KEY       = P('GROQ_KEY');
 const ADMIN_CHAT_ID  = P('ADMIN_CHAT_ID');
 
 const KNOWLEDGE = `
@@ -132,22 +132,32 @@ function handleCallback(cq){
   tg('answerCallbackQuery', {callback_query_id: cq.id});
 }
 
+// ---- AI draft via Groq (free, generous quota) ----
 function generateDraft(userMsg){
-  const models = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'];
-  const prompt = KNOWLEDGE + '\n\nرسالة العميل: ' + userMsg + '\n\nاكتب الرد المناسب:';
-  const body = JSON.stringify({ contents: [{ parts: [{ text: prompt }]}] });
+  const models = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
   let lastErr = '';
   for (let i = 0; i < models.length; i++){
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + models[i] + ':generateContent?key=' + GEMINI_KEY;
     try{
-      const res = UrlFetchApp.fetch(url, {method:'post', contentType:'application/json', payload: body, muteHttpExceptions:true});
+      const res = UrlFetchApp.fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'post', contentType: 'application/json',
+        headers: { Authorization: 'Bearer ' + GROQ_KEY },
+        payload: JSON.stringify({
+          model: models[i],
+          temperature: 0.6,
+          messages: [
+            { role: 'system', content: KNOWLEDGE },
+            { role: 'user',   content: 'رسالة العميل: ' + userMsg + '\n\nاكتب الرد المناسب بالعامية المصرية:' }
+          ]
+        }),
+        muteHttpExceptions: true
+      });
       const code = res.getResponseCode();
       const txt = res.getContentText();
-      if (code === 200) return JSON.parse(txt).candidates[0].content.parts[0].text.trim();
-      lastErr = code + ': ' + txt.substring(0,120);
+      if (code === 200) return JSON.parse(txt).choices[0].message.content.trim();
+      lastErr = code + ': ' + txt.substring(0,150);
     } catch(err){ lastErr = '' + err; }
   }
-  return '[HUMAN] (AI مش متاح دلوقتي — ' + lastErr + '. اكتب الرد بإيدك من زر ✏️ تعديل، أو جرّب بعد دقيقة)';
+  return '[HUMAN] (AI مش متاح — ' + lastErr + '. اكتب الرد من زر ✏️ تعديل)';
 }
 
 function setWebhook(){ Logger.log(tg('setWebhook', {url: ScriptApp.getService().getUrl()}).getContentText()); }

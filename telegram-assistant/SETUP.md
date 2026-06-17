@@ -12,9 +12,10 @@
 2. ابعت `/newbot` → اختار اسم + يوزر (لازم ينتهي بـ `bot`).
 3. هيديك **TOKEN** (سلسلة طويلة) — احفظها.
 
-## الخطوة ٢: هات الـ Gemini API key مجانًا (٢ دقيقة)
-1. روح **aistudio.google.com/app/apikey** (بحساب جوجل).
-2. اضغط **Create API key** → انسخ المفتاح.
+## الخطوة ٢: هات الـ Groq API key مجانًا (٢ دقيقة)
+1. روح **console.groq.com** → سجّل دخول (مجاني، بدون كارت).
+2. من **API Keys** → **Create API Key** → انسخ المفتاح.
+> Groq مجاني وحصته المجانية كبيرة جدًا وأثبت من غيره.
 
 ## الخطوة ٣: هات الـ Chat ID بتاعك (١ دقيقة)
 1. كلّم البوت **@userinfobot** في تيليجرام.
@@ -28,7 +29,7 @@
    | Property | Value |
    |----------|-------|
    | `TELEGRAM_TOKEN` | التوكن من BotFather |
-   | `GEMINI_KEY` | المفتاح من Google AI Studio |
+   | `GROQ_KEY` | المفتاح من console.groq.com |
    | `ADMIN_CHAT_ID` | رقمك من @userinfobot |
 4. احفظ.
 
