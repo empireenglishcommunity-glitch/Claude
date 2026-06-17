@@ -13,7 +13,7 @@ const TELEGRAM_TOKEN = "ضع_توكن_البوت_هنا";
 const ADMIN_CHAT_ID  = "ضع_رقمك_من_userinfobot_هنا";
 // ===========================
 
-const VERSION   = "v8";
+const VERSION   = "v9";
 const MARK      = "🤖 الرد المقترح (راجعه قبل الإرسال):\n";
 const EDITMARK  = "✏️ اكتب ردك للعميل (id: ";
 const LEARNMARK = "🧠 اكتب الرد وهحفظه للمرة الجاية (id: ";
@@ -251,7 +251,7 @@ export default {
           }
           continue;
         }
-        if ((u.reminders || 0) >= 4) continue;                 // max 4 nudges
+        if ((u.reminders || 0) >= REMINDERS.length) continue;   // finished the funnel
         if (now - (u.lastReminder || 0) < 20 * 36e5) continue;  // 1/day max
         if (now - (u.lastSeen || 0) < 20 * 36e5) continue;      // only if inactive ~a day
         await tg("sendMessage", {chat_id: Number(chatId), text: reminderText(u)});
@@ -262,14 +262,19 @@ export default {
   }
 };
 
-function reminderText(u){
-  const stage = u.stage || "engaged";
-  if (stage === "intent")
-    return `إنت على بُعد خطوة واحدة من إنك تبقى Founder 🔥👑\nمحتاج مساعدة في الدفع أو اختيار الباقة؟ أنا هنا. وسعر التأسيس ثابت للأبد ⏳`;
-  if (stage === "considering")
-    return `لسه بتفكر في الباقة المناسبة؟ 🤔\nأغلب الناس بيختاروا Builder ⭐ وبيبدأوا يتكلموا بثقة بسرعة. وفيه ضمان ٧ أيام — صفر مخاطرة 🛡️\nتحب أحجزلك سعر التأسيس قبل ما يزيد؟ 👑`;
-  return `افتكرتك 👋 لسه فرصتك تبقى من مؤسسي Empire English بسعر ثابت للأبد 👑\nالنظام بيبدأ من الصفر ويخليك تتكلم بثقة 🔥 تحب نكمّل؟`;
-}
+// ===== Smart reminder funnel (one per day, in order) =====
+const REMINDERS = [
+  `🌟 قصة نجاح من الإمبراطورية:\n«بدأت من الصفر وكنت بتجمّد لما أتكلم... بعد أسابيع بقيت أمسك محادثة كاملة بثقة!» — عضو في Builder ⭐\nده مش استثناء، ده النظام 👑 تحب تبدأ قصتك إنت؟ اكتب «الباقات» 🔥`,
+
+  `🤔 لسه محتار تختار؟ خليها بسيطة:\n🥉 Recruit = البداية · 🥈 Builder ⭐ = الأكثر اختيارًا (تتكلم فعلاً) · 🥇 Empire = أسرع + اهتمام · 👑 VIP = مدرّب خاص.\nأغلب الناس بيبدأوا بـ Builder وبيكونوا مبسوطين 😍 قوللي هدفك وأرشّحلك الأنسب 🎯👑`,
+
+  `🛡️ قلقان تجرّب؟ معاك ضمان استرجاع ٧ أيام — صفر مخاطرة تمامًا.\n• مبتدئ؟ بنبدأ من الصفر.\n• مشغول؟ النظام مرن والجلسات بتتسجّل.\n• مش متأكد؟ جرّب وانت مأمّن.\nمفيش حاجة تخسرها وكل حاجة تكسبها 🔥 تحب نبدأ؟ 👑`,
+
+  `🎁 عرض المؤسسين لسه شغّال — بس المقاعد بتقل ⏳\nسعر تأسيس ثابت للأبد + شارة Founder + Accent Bootcamp مجاني.\nبعد ما المقاعد تخلص، الأسعار بتزيد. تحب أحجزلك سعرك دلوقتي؟ 👑`,
+
+  `⏰ آخر فرصة — ده آخر تذكير مني 🙏\nلو جاد إنك تتكلم إنجليزي بثقة، دي لحظتك. سعر التأسيس مش هيتكرر.\nابعتلي «عايز اشترك» وأنا أرتبلك كل حاجة في دقيقة 👑🔥`,
+];
+function reminderText(u){ return REMINDERS[(u.reminders || 0)] || REMINDERS[REMINDERS.length - 1]; }
 
 async function tg(method, payload){
   return fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/${method}`, {
