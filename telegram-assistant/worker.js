@@ -188,21 +188,19 @@ async function onMessage(msg, env){
       // Reply + Teach (unknown question)
       if (rt.text.indexOf(LEARNMARK) !== -1){
         const m = rt.text.match(/id:\s*(-?\d+)/);
+        const qm = rt.text.match(/«([^»]*)»/);
         if (m){
           const cid = m[1];
+          const question = qm ? qm[1] : "";
           await tg("sendMessage", {chat_id: Number(cid), text: text});
-          let learned = false;
-          if (env && env.KV){
-            const q = await env.KV.get("pending_" + cid);
-            if (q){
-              const arr = (await env.KV.get("LEARNED", "json")) || [];
-              arr.push({ q: norm(q), reply: text });
-              await env.KV.put("LEARNED", JSON.stringify(arr));
-              await env.KV.delete("pending_" + cid);
-              learned = true;
-            }
+          let learned = false, count = 0;
+          if (env && env.KV && question){
+            const arr = (await env.KV.get("LEARNED", "json")) || [];
+            arr.push({ q: norm(question), reply: text });
+            await env.KV.put("LEARNED", JSON.stringify(arr));
+            learned = true; count = arr.length;
           }
-          await tg("sendMessage", {chat_id: ADMIN_CHAT_ID, text: learned ? "✅ اتبعت ردك، واتحفظ السؤال ده عشان أرد بيه تلقائيًا المرة الجاية 🧠" : "✅ اتبعت ردك للعميل."});
+          await tg("sendMessage", {chat_id: ADMIN_CHAT_ID, text: learned ? ("✅ اتبعت ردك، واتعلمت الإجابة دي 🧠 (إجمالي المتعلّم: " + count + ")") : "✅ اتبعت ردك للعميل (ملاحظة: مكنتش قادر أحفظها — جرّب من زر 🧠 تاني)."});
         }
       }
       // Plain edit (known answer)
@@ -238,8 +236,7 @@ async function onMessage(msg, env){
       ]]}
     });
   } else {
-    // Unknown -> remember the question (for learning) + ask you to reply & teach
-    if (env && env.KV) await env.KV.put("pending_" + chatId, text, {expirationTtl: 86400});
+    // Unknown -> ask you to reply & teach (the question stays in this message's «...»)
     await tg("sendMessage", {
       chat_id: ADMIN_CHAT_ID,
       text: `🚩 سؤال جديد مالوش رد جاهز — من ${name} (id: ${chatId}):\n«${text}»\n\nاضغط الزر، اكتب الرد، وهبعته للعميل وأحفظه للمرة الجاية:`,
@@ -262,7 +259,10 @@ async function onCallback(cq, env){
   } else if (action === "edit"){
     await tg("sendMessage", {chat_id: ADMIN_CHAT_ID, text: `${EDITMARK}${custId}):`, reply_markup: {force_reply: true}});
   } else if (action === "learn"){
-    await tg("sendMessage", {chat_id: ADMIN_CHAT_ID, text: `${LEARNMARK}${custId}):`, reply_markup: {force_reply: true}});
+    const ct = cq.message.text || "";
+    const qm = ct.match(/«([^»]*)»/);
+    const question = qm ? qm[1] : "";
+    await tg("sendMessage", {chat_id: ADMIN_CHAT_ID, text: `${LEARNMARK}${custId}) — للسؤال: «${question}»\nاكتب ردك في خانة الـ Reply 👇`, reply_markup: {force_reply: true}});
   }
   await tg("answerCallbackQuery", {callback_query_id: cq.id});
 }
