@@ -133,14 +133,18 @@ function handleCallback(cq){
 }
 
 function generateDraft(userMsg){
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_KEY;
+  const model = 'gemini-2.0-flash';  // updated model (2026)
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + GEMINI_KEY;
   const body = { contents: [{ parts: [{ text: KNOWLEDGE + '\n\nرسالة العميل: ' + userMsg + '\n\nاكتب الرد المناسب:' }]}] };
   try{
     const res = UrlFetchApp.fetch(url, {method:'post', contentType:'application/json', payload: JSON.stringify(body), muteHttpExceptions:true});
-    const j = JSON.parse(res.getContentText());
+    const code = res.getResponseCode();
+    const txt = res.getContentText();
+    if (code !== 200) return '[HUMAN] (AI error ' + code + ': ' + txt.substring(0,200) + ')';
+    const j = JSON.parse(txt);
     return j.candidates[0].content.parts[0].text.trim();
   } catch(err){
-    return '[HUMAN] (تعذّر توليد رد تلقائي — اكتب الرد يدويًا)';
+    return '[HUMAN] (AI exception: ' + err + ')';
   }
 }
 
