@@ -183,6 +183,21 @@ async function onMessage(msg, env){
       }
       return;
     }
+    if (text === "/version"){
+      await tg("sendMessage", {chat_id: ADMIN_CHAT_ID, text: "✅ النسخة المنشورة: v6 — التعلّم المضمون 🧠\n(لو ظهرلك ده يبقى الكود محدّث ومنشور صح)"});
+      return;
+    }
+    if (text === "/list"){
+      if (env && env.KV){
+        const arr = (await env.KV.get("LEARNED", "json")) || [];
+        if (!arr.length){ await tg("sendMessage", {chat_id: ADMIN_CHAT_ID, text: "📭 لسه مفيش إجابات متعلّمة (العدد = 0)."}); }
+        else {
+          const lines = arr.slice(-10).map((e, i) => (i + 1) + ". «" + e.q + "» → " + e.reply.slice(0, 40)).join("\n");
+          await tg("sendMessage", {chat_id: ADMIN_CHAT_ID, text: "📚 المتعلّم (" + arr.length + "):\n" + lines});
+        }
+      } else { await tg("sendMessage", {chat_id: ADMIN_CHAT_ID, text: "❌ KV مش متصل."}); }
+      return;
+    }
     const rt = msg.reply_to_message;
     if (rt && rt.text){
       // Reply + Teach (unknown question)
