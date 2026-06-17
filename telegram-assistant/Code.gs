@@ -1,22 +1,19 @@
 /**
  * Empire English — Telegram Inquiry Assistant (Human-in-the-loop)
- * 100% free stack: Google Apps Script + Telegram Bot API + Gemini API (free tier)
+ * 100% free: Google Apps Script + Telegram Bot API + Gemini API (free tier)
  *
- * Flow:
- *  Customer messages the bot  ->  Gemini drafts a reply
- *  ->  Bot sends the draft to YOU (admin) with [✅ Approve] [✏️ Edit]
- *  ->  Approve = sent to customer. Edit = you type your version, then it's sent.
+ * Customer messages the bot -> Gemini drafts a reply -> sent to YOU with
+ * [✅ Approve] [✏️ Edit]. Nothing reaches the customer without your approval.
  *
- * SETUP: see SETUP.md (set the 3 Script Properties, deploy as Web App, run setWebhook()).
+ * SETUP: see SETUP.md. After editing code, redeploy: Manage deployments ->
+ * Edit (pencil) -> Version: New version -> Deploy (keeps the same /exec URL).
  */
 
-// ---- Secrets are read from Script Properties (Project Settings > Script Properties) ----
 function P(k){ return PropertiesService.getScriptProperties().getProperty(k); }
 const TELEGRAM_TOKEN = P('TELEGRAM_TOKEN');
 const GEMINI_KEY     = P('GEMINI_KEY');
 const ADMIN_CHAT_ID  = P('ADMIN_CHAT_ID');
 
-// ---- Knowledge the AI uses to answer (edit freely) ----
 const KNOWLEDGE = `
 انت مساعد خدمة عملاء لـ "Empire English Community" — مجتمع تعليم إنجليزي (مش كورس، ده نظام كامل: مهام يومية + كوميونيتي ٢٤ ساعة + تصحيح بالـ AI + لكنة أمريكية من أول يوم).
 ردودك لازم تكون: بالعامية المصرية، قصيرة وواضحة ومحترمة، وتنتهي بسؤال بسيط أو دعوة للاشتراك.
@@ -34,13 +31,12 @@ const KNOWLEDGE = `
 - الدفع: فودافون كاش/إنستا باي 01004581035 (يوزر إنستا باي: mohamedashry10041) · PayPal: paypal.me/bioroma · الإمارات: تحويل بنكي عند الطلب.
 - السعر بيتظبط حسب البلد (مصر بالجنيه، برّه بالدولار).
 
-قواعد مهمة (مهم جدًا):
-- متخترعش أي معلومة مش موجودة فوق. لو مش متأكد من حاجة، قول إنك هتحوّله للفريق.
-- أي موضوع حساس (استرجاع فلوس فعلي، شكوى، نزاع، طلب خاص/خصم) — ابدأ ردك بالعلامة [HUMAN] وبعدها اكتب رد مهذّب بسيط، عشان صاحب المشروع يراجعه.
-- خلّي الرد مختصر (3-5 أسطر max).
+قواعد مهمة:
+- متخترعش أي معلومة مش موجودة فوق. لو مش متأكد، قول إنك هتحوّله للفريق.
+- أي موضوع حساس (استرجاع فعلي، شكوى، نزاع، طلب خاص/خصم) — ابدأ ردك بـ [HUMAN] وبعدها رد مهذّب بسيط.
+- خلّي الرد مختصر (3-5 أسطر).
 `;
 
-// ---- Telegram helper ----
 function tg(method, payload){
   return UrlFetchApp.fetch('https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/' + method, {
     method: 'post', contentType: 'application/json',
@@ -48,10 +44,22 @@ function tg(method, payload){
   });
 }
 
-// ---- Webhook entry point ----
+// Browser visit shows this (confirms the app is live)
+function doGet(){
+  return ContentService.createTextOutput('Empire English bot is running ✅');
+}
+
 function doPost(e){
   try{
     const u = JSON.parse(e.postData.contents);
+
+    // De-duplicate: Telegram retries (because Apps Script returns 302),
+    // so ignore any update_id we already handled. Stops the spam loop.
+    const id = 'u_' + u.update_id;
+    const cache = CacheService.getScriptCache();
+    if (cache.get(id)) return ContentService.createTextOutput('dup');
+    cache.put(id, '1', 21600); // remember for 6h
+
     if (u.callback_query) handleCallback(u.callback_query);
     else if (u.message)   handleMessage(u.message);
   } catch(err){
@@ -73,9 +81,8 @@ function handleMessage(msg){
       tg('sendMessage', {chat_id: Number(target), text: text});
       props.deleteProperty('awaitingEdit');
       tg('sendMessage', {chat_id: ADMIN_CHAT_ID, text: '✅ اتبعت ردك المعدّل للعميل.'});
-    } else {
-      tg('sendMessage', {chat_id: ADMIN_CHAT_ID, text: 'أنا شغّال 👍 هبعتلك أي استفسار جديد عشان توافق عليه.'});
     }
+    // if not editing: do nothing (no spam). The bot only relays customer messages.
     return;
   }
 
@@ -89,7 +96,7 @@ function handleMessage(msg){
   props.setProperty('draft_' + chatId, draft);
 
   const flagged = draft.indexOf('[HUMAN]') === 0;
-  const header = flagged ? '🚩 محتاج مراجعتك — رسالة جديدة من ' : '📩 رسالة جديدة من ';
+  const header = flagged ? '🚩 محتاج مراجعتك — رسالة من ' : '📩 رسالة جديدة من ';
   const cleanDraft = draft.replace('[HUMAN]', '').trim();
   const adminText = header + name + ' (id: ' + chatId + '):\n«' + text + '»\n\n🤖 الرد المقترح:\n' + cleanDraft;
 
@@ -106,8 +113,7 @@ function handleMessage(msg){
 function handleCallback(cq){
   const props = PropertiesService.getScriptProperties();
   const parts = cq.data.split(':');
-  const action = parts[0];
-  const custId = parts[1];
+  const action = parts[0], custId = parts[1];
 
   if (action === 'ok'){
     const draft = props.getProperty('draft_' + custId);
@@ -116,7 +122,7 @@ function handleCallback(cq){
       props.deleteProperty('draft_' + custId);
       tg('editMessageText', {chat_id: cq.message.chat.id, message_id: cq.message.message_id, text: cq.message.text + '\n\n✅ تم الإرسال للعميل.'});
     } else {
-      tg('answerCallbackQuery', {callback_query_id: cq.id, text: 'الرد اتبعت قبل كده أو انتهت صلاحيته.'});
+      tg('answerCallbackQuery', {callback_query_id: cq.id, text: 'الرد اتبعت قبل كده.'});
       return;
     }
   } else if (action === 'edit'){
@@ -126,7 +132,6 @@ function handleCallback(cq){
   tg('answerCallbackQuery', {callback_query_id: cq.id});
 }
 
-// ---- Gemini draft generator (free tier) ----
 function generateDraft(userMsg){
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_KEY;
   const body = { contents: [{ parts: [{ text: KNOWLEDGE + '\n\nرسالة العميل: ' + userMsg + '\n\nاكتب الرد المناسب:' }]}] };
@@ -139,10 +144,5 @@ function generateDraft(userMsg){
   }
 }
 
-// ---- Run ONCE after deploying as Web App, to connect the bot ----
-function setWebhook(){
-  const url = ScriptApp.getService().getUrl();
-  const r = tg('setWebhook', {url: url});
-  Logger.log(r.getContentText());
-}
-function deleteWebhook(){ Logger.log(tg('deleteWebhook', {}).getContentText()); }
+function setWebhook(){ Logger.log(tg('setWebhook', {url: ScriptApp.getService().getUrl()}).getContentText()); }
+function deleteWebhook(){ Logger.log(tg('deleteWebhook', {drop_pending_updates:true}).getContentText()); }
