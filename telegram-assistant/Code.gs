@@ -1,9 +1,12 @@
 /**
- * Empire English — Telegram Auto-Reply (Keyword Answer Bank)  [No AI, 100% free]
+ * Empire English — Telegram Assistant (Keyword Answer Bank + Approval)  [No AI, 100% free]
  *
- * Customer messages the bot -> the bot detects keywords -> sends the matching
- * ready answer instantly. If no answer matches -> it forwards the message to YOU
- * with a "✏️ Reply" button so you answer manually.
+ * Flow:
+ *  Customer messages the bot -> bot detects keywords.
+ *  - If a ready answer matches  -> it's sent to YOU for review with [✅ Approve] [✏️ Edit].
+ *      Approve -> sent to customer. Edit -> you type your version -> sent.
+ *  - If nothing matches -> forwarded to YOU with [✏️ Reply] to answer manually.
+ *  ==> Nothing reaches the customer without YOUR approval.
  *
  * Needs only 2 Script Properties: TELEGRAM_TOKEN, ADMIN_CHAT_ID  (no AI key).
  * SETUP: see SETUP.md.
@@ -198,12 +201,18 @@ function handleMessage(msg){
   const answer = matchAnswer(text);
 
   if (answer){
-    // Auto-send the ready answer + notify admin
-    tg('sendMessage', {chat_id: chatId, text: answer});
-    tg('sendMessage', {chat_id: ADMIN_CHAT_ID, text:'✅ رد تلقائي اتبعت لـ ' + name + ' (id: ' + chatId + ')\nسؤاله: «' + text + '»'});
+    // Found a ready answer -> send to YOU for review/approval BEFORE the customer sees it
+    props.setProperty('draft_' + chatId, answer);
+    tg('sendMessage', {
+      chat_id: ADMIN_CHAT_ID,
+      text:'📩 رسالة من ' + name + ' (id: ' + chatId + '):\n«' + text + '»\n\n🤖 الرد المقترح (راجعه قبل الإرسال):\n' + answer,
+      reply_markup:{ inline_keyboard:[[
+        {text:'✅ موافقة وإرسال', callback_data:'ok:' + chatId},
+        {text:'✏️ تعديل',        callback_data:'edit:' + chatId}
+      ]]}
+    });
   } else {
-    // Unknown -> forward to you to answer manually
-    tg('sendMessage', {chat_id: chatId, text:'وصلتنا رسالتك 🌟 وهنرد عليك حالًا 👌'});
+    // No ready answer -> forward to you to write a reply manually
     tg('sendMessage', {
       chat_id: ADMIN_CHAT_ID,
       text:'🚩 سؤال جديد مالوش رد جاهز — من ' + name + ' (id: ' + chatId + '):\n«' + text + '»\n\nاضغط الزر وردّ بنفسك (وفكّر تضيفه لبنك الإجابات):',
@@ -215,8 +224,20 @@ function handleMessage(msg){
 function handleCallback(cq){
   const props = PropertiesService.getScriptProperties();
   const parts = cq.data.split(':');
-  if (parts[0] === 'edit'){
-    props.setProperty('awaitingEdit', parts[1]);
+  const action = parts[0], custId = parts[1];
+
+  if (action === 'ok'){
+    const draft = props.getProperty('draft_' + custId);
+    if (draft){
+      tg('sendMessage', {chat_id: Number(custId), text: draft});
+      props.deleteProperty('draft_' + custId);
+      tg('editMessageText', {chat_id: cq.message.chat.id, message_id: cq.message.message_id, text: cq.message.text + '\n\n✅ تم الإرسال للعميل.'});
+    } else {
+      tg('answerCallbackQuery', {callback_query_id: cq.id, text:'الرد اتبعت قبل كده.'});
+      return;
+    }
+  } else if (action === 'edit'){
+    props.setProperty('awaitingEdit', custId);
     tg('sendMessage', {chat_id: ADMIN_CHAT_ID, text:'✏️ اكتب ردك دلوقتي وهبعته للعميل على طول:'});
   }
   tg('answerCallbackQuery', {callback_query_id: cq.id});
