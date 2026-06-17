@@ -1,10 +1,8 @@
 /**
- * Empire English — Smart Sales Bot (v10) — Cloudflare Workers
- * Guided buttons + Answer Bank + PAYMENT APPROVAL GATE + Auto-Learn + Memory
- * + Daily reminder funnel + Invoice capture + Subscribe confirm + Feedback.
- *
- * SAFETY: anything money-related (payment details / crypto / offers) is sent to YOU
- * for approval BEFORE it reaches the customer. General info auto-replies instantly.
+ * Empire English — Smart Sales Bot (v11) — Cloudflare Workers
+ * Guided buttons + Arabic-clean copy + Payment approval gate
+ * (crypto & bank transfer are escalated to YOU to send personally)
+ * + Auto-Learn + Memory + Daily reminders + Invoice capture + Subscribe confirm + Feedback.
  *
  * Setup: fill TELEGRAM_TOKEN + ADMIN_CHAT_ID, bind KV namespace "KV", add Cron "0 16 * * *".
  * Admin: /version /kv /list /stats
@@ -13,85 +11,86 @@
 // ======= عدّل دول بس =======
 const TELEGRAM_TOKEN = "ضع_توكن_البوت_هنا";
 const ADMIN_CHAT_ID  = "ضع_رقمك_من_userinfobot_هنا";
-// ---- بيانات الدفع (راجعها كويس) ----
 const PAY = {
   vodafone: "01004581035",
   instapay: "01004581035 / mohamedashry10041",
-  paypal:   "paypal.me/bioroma",
-  usdt:     "ضع_عنوان_USDT_هنا (Binance)",   // ← ابعتلي العنوان + الشبكة (TRC20/BEP20)
-  usdtNetwork: "TRC20",
-  usdtQR:   "",                               // ← (اختياري) رابط صورة QR للمحفظة
-  bank:     "تحويل بنكي للمبالغ الكبيرة/السنوي — اطلب التفاصيل"
+  paypal:   "paypal.me/bioroma"
 };
 // ===========================
 
-const VERSION = "v10";
+const VERSION = "v11";
 const MARK = "💰 محتوى دفع للمراجعة (وافق قبل الإرسال):\n";
 const EDITMARK = "✏️ اكتب ردك للعميل (id: ";
 const LEARNMARK = "🧠 اكتب الرد وهحفظه للمرة الجاية (id: ";
 
-const WELCOME = `أهلاً بيك في إمبراطورية Empire English 👑✨
-إحنا مش كورس... إحنا النظام اللي هيخليك تتكلم إنجليزي بثقة 🔥
-اختار من تحت وأنا ماشي معاك خطوة بخطوة 👇`;
+const WELCOME = `أهلاً بيك في إمبراطورية Empire English 👑
 
-const SUB_WELCOME = `مبروك يا Founder 🎉👑 أهلاً بيك في الإمبراطورية!
-1️⃣ هبعتلك لينك الكوميونيتي + شارة Founder
-2️⃣ ابدأ اختبار تحديد المستوى
-3️⃣ دفعتك الأولى السبت ٢٧ يونيو 🚀
-مبسوطين إنك معانا 💪`;
+إحنا مش مجرد كورس... إحنا نظام كامل بيوصّلك لطلاقة حقيقية في الإنجليزي خطوة بخطوة 🔥
 
-const FEEDBACK = `إزاي تجربتك معانا لحد دلوقتي؟ 🌟 رأيك بيهمنا — ابعتلنا كلمتين أو أي اقتراح 👑`;
+اختار من القائمة وأنا معاك في كل خطوة 👇`;
 
-// ===== payment text (SENSITIVE — always approved by admin first) =====
+const SUB_WELCOME = `مبروك 🎉👑 بقيت من الأعضاء المؤسسين! أهلاً بيك في الإمبراطورية.
+
+الخطوات دلوقتي:
+١) هبعتلك رابط المجتمع وشارة العضو المؤسس
+٢) ابدأ اختبار تحديد المستوى
+٣) أول مجموعة بتبدأ يوم السبت ٢٧ يونيو 🚀
+
+مبسوطين جدًا إنك معانا 💪`;
+
+const FEEDBACK = `إزاي تجربتك معانا لحد دلوقتي؟ 🌟
+رأيك مهم جدًا — ابعتلنا كلمتين أو أي اقتراح 👑`;
+
+// payment text (sensitive → approved by you first)
 function payText(pkg){
-  const head = pkg ? `تمام يا بطل 👑 باقة ${pkg} — تفاصيل الدفع:` : `💳 طرق الدفع:`;
+  const head = pkg ? `تمام يا بطل 👑 باقة ${pkg} — طرق الدفع:` : `💳 طرق الدفع:`;
   return `${head}
 
-🇪🇬 جوه مصر:
+🇪🇬 جوّه مصر:
 • فودافون كاش: ${PAY.vodafone}
 • إنستا باي: ${PAY.instapay}
 
 🌍 برّه مصر:
-• PayPal: ${PAY.paypal}
-• 🪙 USDT (Binance ${PAY.usdtNetwork}): ${PAY.usdt}
-• 🏦 تحويل بنكي: ${PAY.bank}
+• باي بال (PayPal): ${PAY.paypal}
 
-📸 بعد الدفع ابعت صورة الإيصال هنا وأفعّلك فورًا كـ Founder 👑`;
+🪙 عايز تدفع كريبتو (USDT) أو 🏦 تحويل بنكي؟ قوللي وأبعتلك التفاصيل على طول 👌
+
+📸 بعد الدفع ابعت صورة الإيصال هنا وأفعّل اشتراكك فورًا كعضو مؤسس 👑`;
 }
 
-// ===== smart reminder funnel (1/day) =====
+// daily reminder funnel (one per day, in order)
 const REMINDERS = [
-  `🌟 قصة نجاح: «بدأت من الصفر وكنت بتجمّد لما أتكلم... بعد أسابيع بقيت أمسك محادثة كاملة بثقة!» — عضو Builder ⭐\nتحب تبدأ قصتك؟ 👑`,
-  `🤔 لسه محتار؟ أغلب الناس بيبدأوا بـ Builder ⭐ وبيتكلموا بثقة بسرعة. قوللي هدفك وأرشّحلك الأنسب 🎯👑`,
-  `🛡️ قلقان تجرّب؟ معاك ضمان استرجاع ٧ أيام — صفر مخاطرة. مبتدئ؟ بنبدأ من الصفر. مشغول؟ النظام مرن 🔥`,
-  `🎁 عرض المؤسسين لسه شغّال بس المقاعد بتقل ⏳ سعر تأسيس ثابت للأبد + شارة Founder. تحب أحجزلك؟ 👑`,
-  `⏰ آخر فرصة — ده آخر تذكير مني 🙏 لو جاد إنك تتكلم إنجليزي بثقة، دي لحظتك. ابعت «اشتراك» 👑🔥`,
+  `🌟 قصة نجاح من الإمبراطورية:\n«بدأت من الصفر وكنت بتتلعثم لما أتكلم... بعد أسابيع بقيت أمسك محادثة كاملة بثقة!»\nتحب تبدأ قصتك إنت كمان؟ 👑`,
+  `🤔 لسه محتار تختار؟\nأغلب الناس بيبدأوا بباقة Builder وبيتكلموا بثقة بسرعة. قوللي هدفك وأرشّحلك الأنسب ليك 🎯👑`,
+  `🛡️ قلقان تجرّب؟\nمعاك ضمان استرجاع فلوسك خلال ٧ أيام — مفيش أي مخاطرة. مبتدئ؟ بنبدأ من الصفر. مشغول؟ النظام مرن 🔥`,
+  `🎁 عرض التأسيس لسه شغّال، بس الأماكن بتقل ⏳\nسعر ثابت مدى الحياة + شارة عضو مؤسس. تحب أحجزلك مكانك؟ 👑`,
+  `⏰ آخر فرصة — ده آخر تذكير مني 🙏\nلو جاد إنك تتكلم إنجليزي بثقة، دي لحظتك. ابعتلي كلمة «اشتراك» وأنا أرتبلك كل حاجة 👑`,
 ];
 
-// ===== text answer bank (general = auto; sensitive = approval) =====
+// text answer bank: menu = open buttons · sensitive = payment approval · personal = you handle · else auto-reply
 const ANSWERS = [
   { keys:['عايز اشترك','هشترك','اشترك','اشتراك','انضم','join','subscribe'], menu:"sub" },
-  { keys:['طرق الدفع','ازاي ادفع','الدفع','ادفع','فودافون','انستا','instapay','paypal','تحويل','كريبتو','crypto','usdt','بينminance','binance','محفظه'], sensitive:true, reply: payText(null) },
-  { keys:['غالي','غاليه','مكلف','كتير اوي','مش مناسب','معايا مش','السعر عالي'], reply:`أفهمك 👌 بس فكّر: ده أرخص من مدرس خصوصي، ومعاك نظام كامل + كوميونيتي ٢٤ ساعة + ضمان ٧ أيام 🛡️\nولو الميزانية محدودة، Recruit بـ 199ج/19$ بداية ممتازة 🥉 — وتقدر ترقّي بعدين. تحب أرشّحلك؟ 👑` },
-  { keys:['ليه اغلى بره','ليه مغليها','الفرق بين مصر وبره','ليه برة مصر اغلى','ليه السعر مختلف'], reply:`سؤال وجيه 👍 السعر بيتظبط حسب القدرة الشرائية لكل بلد — زي نتفليكس وسبوتيفاي بالظبط. يعني المصري بيدفع *أقل* مش العكس 🇪🇬، وكل منطقة بسعر عادل ليها 🌍👑` },
-  { keys:['recruit','ريكروت','الباقه الاولى'], reply:`RECRUIT 🥉 (199ج/19$) — البداية الصح\n✅ نظام يومي + ملخصات AI + قنوات مستواك + تقييم أسبوعي\n💡 وعشان تتكلم أسرع، Builder ⭐ بتضيف تصحيح + جلسات يومية 🔥` },
-  { keys:['builder','بيلدر','الباقه التانيه','التانيه'], reply:`BUILDER ⭐ (399ج/39$) — الأكثر اختيارًا 🔥\n✅ كل Recruit + تصحيح كلامك بالـ AI + كل الجلسات الصوتية + مكتبة + امتحانات\n«ده اللي بيخليك تتكلم فعلاً» 👑` },
-  { keys:['empire','امباير','الباقه التالته'], reply:`EMPIRE 🥇 (799ج/89$) — أسرع + اهتمام شخصي\n✅ كل Builder + كوتشينج جماعي + خطة شهرية + مراجعة فردية + شهادات 👑` },
-  { keys:['vip','في اي بي','خاص','لوحدي','مدرس خاص'], reply:`VIP 👑 (3,500ج/249$ · مقاعد محدودة)\n✅ كل Empire + ٤ جلسات خاصة 1-on-1 + تصحيح غير محدود + لاين واتساب مباشر\n«كأن معاك مدرب خاص» 🔥` },
-  { keys:['الفرق','قارن','مقارنه','محتار','انهي احسن','انهي افضل','vs'], menu:"compare" },
+  { keys:['طرق الدفع','ازاي ادفع','الدفع','ادفع','فودافون','انستا','instapay','باي بال','paypal'], sensitive:true, reply: payText(null) },
+  { keys:['كريبتو','crypto','usdt','بينانس','binance','تحويل بنكي','حساب بنكي','حواله بنكيه'], personal:true },
+  { keys:['غالي','غاليه','مكلف','كتير اوي','مش مناسب','السعر عالي'], reply:`أفهمك 👌 بس خليني أوضّحلك:\nده أرخص بكتير من مدرّس خصوصي، ومعاك نظام متكامل + مجتمع طول اليوم + ضمان استرجاع ٧ أيام 🛡️\nولو ميزانيتك محدودة، باقة Recruit بـ ١٩٩ جنيه بداية ممتازة، وتقدر ترفّع باقتك بعدين. تحب أرشّحلك؟ 👑` },
+  { keys:['ليه اغلى بره','ليه مغليها','الفرق بين مصر وبره','ليه السعر مختلف','ليه برة مصر'], reply:`سؤال في محلّه 👍\nالسعر بيختلف حسب مستوى المعيشة في كل بلد — زي نتفليكس بالظبط. يعني المصري بيدفع أقل مش أكتر 🇪🇬، وكل بلد بسعر عادل ليها 🌍👑` },
+  { keys:['recruit','ريكروت','الباقه الاولى'], reply:`باقة Recruit 🥉 — ١٩٩ جنيه / ١٩ دولار شهريًا (البداية الصح)\n\n✅ نظام يومي متكامل\n✅ ملخصات أسبوعية\n✅ قنوات المستوى (كتابة وصوت)\n✅ تقييم أسبوعي لتقدمك\n\n💡 وعشان تتكلم أسرع، باقة Builder بتزوّدلك تصحيح فوري وجلسات يومية 🔥` },
+  { keys:['builder','بيلدر','الباقه التانيه','التانيه'], reply:`باقة Builder ⭐ — ٣٩٩ جنيه / ٣٩ دولار شهريًا (الأكثر اختيارًا 🔥)\n\n✅ كل مميزات Recruit\n✅ تصحيح كلامك وكتابتك بالذكاء الاصطناعي\n✅ كل الجلسات الصوتية اليومية (بتتكلم والمجموعة بتسمعك)\n✅ مكتبة أفلام وبودكاست + اختبارات الترقية\n\nدي الباقة اللي بتخليك تتكلم فعلاً 👑` },
+  { keys:['empire','امباير','الباقه التالته'], reply:`باقة Empire 🥇 — ٧٩٩ جنيه / ٨٩ دولار شهريًا (نتيجة أسرع + اهتمام شخصي)\n\n✅ كل مميزات Builder\n✅ جلستين تدريب جماعي شهريًا\n✅ خطة شهرية شخصية + مراجعة فردية\n✅ شهادات إتقان معتمدة من الإمبراطورية 👑` },
+  { keys:['vip','في اي بي','خاص','لوحدي','مدرس خاص'], reply:`باقة VIP 👑 — ٣٥٠٠ جنيه / ٢٤٩ دولار شهريًا (أماكن محدودة جدًا)\n\n✅ كل مميزات Empire\n✅ ٤ جلسات خاصة فردية شهريًا (إنت بس مع المدرّب)\n✅ تصحيح غير محدود خلال ٢٤ ساعة\n✅ تواصل مباشر على واتساب\n\nكأن معاك مدرّب خاص ليك لوحدك 🔥` },
+  { keys:['الفرق','قارن','مقارنه','محتار','انهي احسن','انهي افضل'], menu:"compare" },
   { keys:['ساعدني','رشحلي','اختار ايه','يناسبني','انهي باقه'], menu:"help" },
-  { keys:['مبتدئ','من الصفر','ضعيف','مستواي','صفر','beginner'], reply:`متقلقش 🌟 بنبدأ من Level 0 — الصفر تمامًا، والنظام معمول للمبتدئين، وأول ما تدخل تعمل اختبار تحديد مستوى 👑` },
-  { keys:['ضمان','استرجاع','تجربه','فري','free','trial','مخاطره'], reply:`فيه ضمان استرجاع ٧ أيام 🛡️ صفر مخاطرة — تجرّب، ولو مش مناسب ترجعلك فلوسك 🔥👑` },
-  { keys:['تسجيل','تسجيلات','مسجل','فيديو','recording'], reply:`أيوه 🎥 كل الجلسات بتتسجّل في «خزنة التسجيلات» وترجعلها أي وقت (من Builder وفوق) 👑` },
-  { keys:['مواعيد','ميعاد','الساعه','schedule','بتبدا'], reply:`الجلسات يومية وفيها أكتر من ميعاد (وكلها بتتسجّل) 🎤 الجدول بيوصلك أول ما تدخل، والدفعة الأولى السبت ٢٧ يونيو 👑` },
-  { keys:['اونلاين','حضوري','online','مكان','عن بعد'], reply:`كله أونلاين ١٠٠٪ 🌍 كوميونيتي + جلسات صوتية حية من أي مكان 👑` },
-  { keys:['شهاده','شهادة','certificate','ايلتس','ielts','توفل'], reply:`عندنا شهادات Mastery في Empire و VIP 🏅 والنظام بيقوّي مهاراتك لأي امتحان زي IELTS — بس إحنا مش جهة الامتحان الرسمي 👑` },
-  { keys:['نصب','مضمون','ثقة','reviews','حقيقي'], reply:`سؤال مشروع 👍 فيه ضمان ٧ أيام، أعضاء حقيقيين بنتايج، وكوميونيتي شغّال ٢٤ ساعة تشوفه بنفسك 🛡️👑` },
-  { keys:['عرض','خصم','اوفر','offer','discount','كوبون'], sensitive:true, reply:`🎁 أحسن عرض دلوقتي: سعر التأسيس ثابت للأبد + الاشتراك السنوي يوفّر ~٣٥٪. تحب أحجزلك قبل ما المقاعد تخلص؟ 👑` },
-  { keys:['شكرا','متشكر','تسلم','thanks'], reply:`العفو يا فندم 🌟 تحت أمرك دايمًا 👑` },
+  { keys:['مبتدئ','من الصفر','ضعيف','مستواي','صفر','beginner'], reply:`متقلقش خالص 🌟\nبنبدأ من المستوى صفر تمامًا، والنظام معمول للمبتدئين بالظبط، وأول ما تدخل بتعمل اختبار تحديد مستوى يحطك في المكان الصح 👑` },
+  { keys:['ضمان','استرجاع','تجربه','مجاني','free','مخاطره'], reply:`معاك ضمان استرجاع فلوسك خلال ٧ أيام 🛡️\nيعني تجرّب وانت مطمّن تمامًا — لو مش مناسب ترجعلك فلوسك. مفيش أي مخاطرة 🔥👑` },
+  { keys:['تسجيل','تسجيلات','مسجل','فيديو'], reply:`أيوه 🎥 كل الجلسات بتتسجّل، وتقدر ترجعلها في أي وقت طول ما اشتراكك شغّال (من باقة Builder وفوق) 👑` },
+  { keys:['مواعيد','ميعاد','الساعه','بتبدا'], reply:`الجلسات يومية وفيها أكتر من معاد عشان تناسب الجميع 🎤 (وكلها بتتسجّل لو فاتك حاجة).\nالجدول الكامل بيوصلك أول ما تدخل، وأول مجموعة بتبدأ السبت ٢٧ يونيو 👑` },
+  { keys:['اونلاين','حضوري','online','مكان','عن بعد'], reply:`كله أونلاين بالكامل 🌍 — مجتمع + جلسات صوتية مباشرة تحضرها من أي مكان 👑` },
+  { keys:['شهاده','شهادة','certificate','ايلتس','ielts','توفل'], reply:`عندنا شهادات إتقان في باقتي Empire و VIP 🏅\nوالنظام بيقوّي مهاراتك في الكلام والاستماع اللي بتفيدك في أي امتحان زي IELTS — بس إحنا مش جهة الامتحان الرسمي 👑` },
+  { keys:['نصب','مضمون','ثقة','حقيقي','تجارب'], reply:`سؤال في محلّه 👍\nعندك ضمان استرجاع ٧ أيام، وأعضاء حقيقيين بنتايج، ومجتمع شغّال طول اليوم تقدر تشوفه بنفسك 🛡️👑` },
+  { keys:['عرض','خصم','اوفر','offer','discount'], sensitive:true, reply:`🎁 أحسن عرض دلوقتي:\nسعر التأسيس ثابت مدى الحياة، والاشتراك السنوي بيوفّرلك حوالي ٣٥٪.\nتحب أحجزلك قبل ما الأماكن تخلص؟ 👑` },
+  { keys:['شكرا','متشكر','تسلم','thanks'], reply:`العفو يا فندم 🌟 تحت أمرك في أي وقت 👑` },
 ];
 
-// ============================================================
 export default {
   async fetch(req, env){
     if (req.method !== "POST") return new Response("Empire English bot ✅ " + VERSION);
@@ -129,27 +128,25 @@ async function tg(method, payload){
 }
 function K(rows){ return {inline_keyboard: rows}; }
 function B(t,d){ return {text:t, callback_data:d}; }
-
 function norm(s){ return (s||"").toString().toLowerCase().replace(/[\u064B-\u0652\u0670]/g,"").replace(/\u0640/g,"").replace(/[أإآ]/g,"ا").replace(/ى/g,"ي").replace(/ة/g,"ه").replace(/\s+/g," ").trim(); }
 
-// ---- menu views ----
 function view(name){
   if (name === "main") return { text: WELCOME, kb: K([
     [B("📦 الباقات","m:packages"), B("🎯 ساعدني أختار","m:help")],
     [B("🆚 قارن الباقات","m:compare"), B("💳 طرق الدفع","m:pay")],
     [B("❓ أسئلة شائعة","m:faq"), B("👑 عايز أشترك","m:sub")] ]) };
-  if (name === "packages") return { text:`باقاتك يا بطل 👑 (السعر حسب بلدك):\n🥉 Recruit 199ج/19$ · 🥈 Builder ⭐ 399ج/39$ · 🥇 Empire 799ج/89$ · 👑 VIP 3,500ج/249$\nاختار باقة تشوف تفاصيلها 👇`, kb:K([
+  if (name === "packages") return { text:`دي باقاتنا يا بطل 👑 (السعر بيتظبط حسب بلدك):\n\n🥉 Recruit — ١٩٩ج / ١٩$\n🥈 Builder ⭐ — ٣٩٩ج / ٣٩$\n🥇 Empire — ٧٩٩ج / ٨٩$\n👑 VIP — ٣٥٠٠ج / ٢٤٩$\n\nاختار باقة تعرف تفاصيلها 👇`, kb:K([
     [B("🥉 Recruit","p:recruit"), B("🥈 Builder ⭐","p:builder")],
     [B("🥇 Empire","p:empire"), B("👑 VIP","p:vip")],
     [B("👑 عايز أشترك","m:sub"), B("↩️ رجوع","m:main")] ]) };
-  if (name === "compare") return { text:"عايز تقارن إيه؟ 🆚", kb:K([
-    [B("Recruit ⚔️ Builder","cmp:rb"), B("Builder ⚔️ Empire","cmp:be")],
-    [B("Empire ⚔️ VIP","cmp:ev"), B("📊 قارن الكل","cmp:all")],
+  if (name === "compare") return { text:"عايز تقارن بين إيه؟ 🆚", kb:K([
+    [B("Recruit و Builder","cmp:rb"), B("Builder و Empire","cmp:be")],
+    [B("Empire و VIP","cmp:ev"), B("📊 قارن الكل","cmp:all")],
     [B("↩️ رجوع","m:main")] ]) };
   if (name === "help") return { text:"إيه أقرب حاجة ليك؟ وأنا أرشّحلك الباقة المثالية 🎯", kb:K([
     [B("💰 ميزانيتي محدودة","rec:budget")],
     [B("🗣️ عايز أتكلم بثقة","rec:speak")],
-    [B("🎯 عندي هدف/ديدلاين","rec:goal")],
+    [B("🎯 عندي هدف أو موعد محدد","rec:goal")],
     [B("👑 عايز مدرّب خاص","rec:personal")],
     [B("↩️ رجوع","m:main")] ]) };
   if (name === "faq") return { text:"اختار سؤالك 👇", kb:K([
@@ -157,37 +154,37 @@ function view(name){
     [B("🎥 التسجيلات","faq:rec"), B("🕐 المواعيد","faq:time")],
     [B("🌍 أونلاين؟","faq:online"), B("💸 غالية عليّا؟","faq:price")],
     [B("↩️ رجوع","m:main")] ]) };
-  if (name === "sub") return { text:"اختار باقتك وأنا أجهّزلك تفاصيل الدفع 👑", kb:K([
+  if (name === "sub") return { text:"اختار باقتك وأنا أجهّزلك طريقة الدفع 👑", kb:K([
     [B("🥉 Recruit","buy:Recruit"), B("🥈 Builder ⭐","buy:Builder")],
     [B("🥇 Empire","buy:Empire"), B("👑 VIP","buy:VIP")],
     [B("↩️ رجوع","m:main")] ]) };
   return null;
 }
 const PKG = {
-  recruit:`RECRUIT 🥉 (199ج/19$) — البداية الصح\n✅ نظام يومي + ملخصات AI + قنوات مستواك + تقييم أسبوعي\n«تبدأ صح وتبني عادة يومية» 👑`,
-  builder:`BUILDER ⭐ (399ج/39$) — الأكثر اختيارًا 🔥\n✅ كل Recruit + تصحيح كلامك بالـ AI + كل الجلسات الصوتية + مكتبة + امتحانات\n«ده اللي بيخليك تتكلم فعلاً» 👑`,
-  empire:`EMPIRE 🥇 (799ج/89$) — أسرع + اهتمام شخصي\n✅ كل Builder + كوتشينج جماعي + خطة شهرية + مراجعة فردية + شهادات 👑`,
-  vip:`VIP 👑 (3,500ج/249$ · مقاعد محدودة)\n✅ كل Empire + ٤ جلسات خاصة 1-on-1 + تصحيح غير محدود + لاين واتساب مباشر 🔥`
+  recruit:`باقة Recruit 🥉 — ١٩٩ج / ١٩$ شهريًا (البداية الصح)\n✅ نظام يومي متكامل\n✅ ملخصات أسبوعية\n✅ قنوات المستوى (كتابة وصوت)\n✅ تقييم أسبوعي\n«تبدأ صح وتبني عادة يومية» 👑`,
+  builder:`باقة Builder ⭐ — ٣٩٩ج / ٣٩$ شهريًا (الأكثر اختيارًا 🔥)\n✅ كل مميزات Recruit\n✅ تصحيح كلامك وكتابتك بالذكاء الاصطناعي\n✅ كل الجلسات الصوتية اليومية\n✅ مكتبة أفلام وبودكاست + اختبارات الترقية\n«اللي بتخليك تتكلم فعلاً» 👑`,
+  empire:`باقة Empire 🥇 — ٧٩٩ج / ٨٩$ شهريًا (أسرع + اهتمام شخصي)\n✅ كل مميزات Builder\n✅ جلستين تدريب جماعي شهريًا\n✅ خطة شهرية شخصية + مراجعة فردية\n✅ شهادات إتقان 👑`,
+  vip:`باقة VIP 👑 — ٣٥٠٠ج / ٢٤٩$ شهريًا (أماكن محدودة)\n✅ كل مميزات Empire\n✅ ٤ جلسات خاصة فردية شهريًا\n✅ تصحيح غير محدود\n✅ تواصل مباشر على واتساب\n«كأن معاك مدرّب خاص» 🔥`
 };
 const CMP = {
-  rb:`Recruit ⚔️ Builder:\n🥉 Recruit = النظام اليومي لوحدك.\n🥈 Builder ⭐ = + تصحيح كلامك بالـ AI + كل الجلسات الصوتية + مكتبة. (الفرق إنك تتكلم فعلاً) 🔥`,
-  be:`Builder ⚔️ Empire:\n🥈 Builder = تتكلم بثقة جماعيًا.\n🥇 Empire = + كوتشينج + خطة شخصية + مراجعة فردية + شهادات (نتيجة أسرع) 👑`,
-  ev:`Empire ⚔️ VIP:\n🥇 Empire = كوتشينج جماعي.\n👑 VIP = + ٤ جلسات خاصة 1-on-1 + تصحيح غير محدود + لاين مباشر (أقصى اهتمام) 🔥`,
-  all:`📊 مقارنة:\n🥉 Recruit 199ج/19$ — البداية\n🥈 Builder ⭐ 399ج/39$ — الأكثر اختيارًا (تتكلم فعلاً)\n🥇 Empire 799ج/89$ — أسرع + اهتمام\n👑 VIP 3,500ج/249$ — مدرّب خاص\nأغلب الناس بيبدأوا بـ Builder ⭐👑`
+  rb:`Recruit و Builder:\n🥉 Recruit = النظام اليومي بمفردك.\n🥈 Builder = + تصحيح كلامك بالذكاء الاصطناعي + كل الجلسات الصوتية + مكتبة.\nالفرق إنك تتكلم فعلاً 🔥`,
+  be:`Builder و Empire:\n🥈 Builder = تتكلم بثقة وسط المجموعة.\n🥇 Empire = + تدريب جماعي + خطة شخصية + مراجعة فردية + شهادات.\nنتيجة أسرع 👑`,
+  ev:`Empire و VIP:\n🥇 Empire = تدريب جماعي.\n👑 VIP = + ٤ جلسات خاصة فردية + تصحيح غير محدود + تواصل مباشر.\nأقصى اهتمام شخصي 🔥`,
+  all:`📊 مقارنة سريعة:\n🥉 Recruit — البداية\n🥈 Builder ⭐ — الأكثر اختيارًا (تتكلم فعلاً)\n🥇 Empire — أسرع + اهتمام شخصي\n👑 VIP — مدرّب خاص\nأغلب الناس بيبدأوا بـ Builder 👑`
 };
 const REC = {
-  budget:["recruit","ميزانيتك محدودة؟ Recruit 🥉 بداية ممتازة، وتقدّر ترقّي بعدين 👑"],
-  speak:["builder","عايز تتكلم بثقة؟ Builder ⭐ هي اختيارك المثالي 🔥"],
-  goal:["empire","عندك هدف/ديدلاين؟ Empire 🥇 هتوصّلك أسرع 👑"],
-  personal:["vip","عايز اهتمام شخصي كامل؟ VIP 👑 مدرّبك الخاص 🔥"]
+  budget:["recruit","ميزانيتك محدودة؟ باقة Recruit 🥉 بداية ممتازة، وتقدر ترفّع باقتك بعدين 👑"],
+  speak:["builder","عايز تتكلم بثقة؟ باقة Builder ⭐ هي اختيارك المثالي 🔥"],
+  goal:["empire","عندك هدف أو موعد محدد؟ باقة Empire 🥇 هتوصّلك أسرع 👑"],
+  personal:["vip","عايز اهتمام شخصي كامل؟ باقة VIP 👑 مدرّبك الخاص 🔥"]
 };
 const FAQ = {
-  guarantee:`🛡️ ضمان استرجاع ٧ أيام — صفر مخاطرة. تجرّب وانت مأمّن 👑`,
-  beginner:`🧑‍🎓 بنبدأ من الصفر تمامًا (Level 0)، والنظام معمول للمبتدئين بالظبط 🌟`,
-  rec:`🎥 كل الجلسات بتتسجّل في خزنة التسجيلات وترجعلها أي وقت (من Builder وفوق) 👑`,
-  time:`🕐 جلسات يومية بأكتر من ميعاد وكلها بتتسجّل. الدفعة الأولى السبت ٢٧ يونيو 👑`,
-  online:`🌍 كله أونلاين ١٠٠٪ — كوميونيتي + جلسات صوتية من أي مكان 👑`,
-  price:`💸 أرخص من مدرس خصوصي ومعاك نظام كامل + ضمان ٧ أيام. ولو الميزانية محدودة، Recruit بداية ممتازة 🥉👑`
+  guarantee:`🛡️ معاك ضمان استرجاع فلوسك خلال ٧ أيام — تجرّب وانت مطمّن تمامًا 👑`,
+  beginner:`🧑‍🎓 بنبدأ من المستوى صفر تمامًا، والنظام معمول للمبتدئين بالظبط 🌟`,
+  rec:`🎥 كل الجلسات بتتسجّل وترجعلها أي وقت (من باقة Builder وفوق) 👑`,
+  time:`🕐 جلسات يومية بأكتر من معاد وكلها بتتسجّل. أول مجموعة بتبدأ السبت ٢٧ يونيو 👑`,
+  online:`🌍 كله أونلاين بالكامل — مجتمع + جلسات صوتية مباشرة من أي مكان 👑`,
+  price:`💸 أرخص من مدرّس خصوصي ومعاك نظام متكامل + ضمان ٧ أيام. ولو الميزانية محدودة، باقة Recruit بداية ممتازة 🥉👑`
 };
 
 async function touch(env, chatId, name, stage){
@@ -200,17 +197,11 @@ async function touch(env, chatId, name, stage){
   await env.KV.put(key, JSON.stringify(u));
 }
 
-// payment request -> goes to ADMIN for approval (safety gate)
 async function requestPayment(env, custId, name, pkg){
-  await tg("sendMessage", {chat_id: Number(custId), text:"تمام يا بطل 👑 ثواني وبجهّزلك تفاصيل الدفع 🙌"});
-  await tg("sendMessage", {
-    chat_id: ADMIN_CHAT_ID,
+  await tg("sendMessage", {chat_id: Number(custId), text:"تمام يا بطل 👑 ثواني وأجهّزلك طريقة الدفع 🙌"});
+  await tg("sendMessage", {chat_id: ADMIN_CHAT_ID,
     text: `💰 طلب دفع من ${name} (id: ${custId})${pkg? " — باقة "+pkg : ""}:\n\n${MARK}${payText(pkg)}`,
-    reply_markup: K([
-      [B("✅ موافقة وإرسال","ok:"+custId)],
-      [B("🪙 موافقة + صورة USDT","okq:"+custId)],
-      [B("✏️ تعديل","edit:"+custId)] ])
-  });
+    reply_markup: K([ [B("✅ موافقة وإرسال","ok:"+custId)], [B("✏️ تعديل","edit:"+custId)] ]) });
   await touch(env, custId, name, "intent");
 }
 
@@ -221,7 +212,7 @@ async function onMessage(msg, env){
 
   // ---- Admin ----
   if (fromId === String(ADMIN_CHAT_ID)){
-    if (text === "/version"){ await tg("sendMessage",{chat_id:ADMIN_CHAT_ID,text:"✅ النسخة المنشورة: "+VERSION+" — بوت مبيعات بالأزرار + بوابة دفع 👑"}); return; }
+    if (text === "/version"){ await tg("sendMessage",{chat_id:ADMIN_CHAT_ID,text:"✅ النسخة المنشورة: "+VERSION}); return; }
     if (text === "/kv"){ const a=env&&env.KV?(await env.KV.get("LEARNED","json"))||[]:null; await tg("sendMessage",{chat_id:ADMIN_CHAT_ID,text: a?("✅ KV متصلة. المتعلّم: "+a.length):"❌ KV مش متصلة."}); return; }
     if (text === "/list"){ if(env&&env.KV){const a=(await env.KV.get("LEARNED","json"))||[]; await tg("sendMessage",{chat_id:ADMIN_CHAT_ID,text:a.length?("📚 ("+a.length+"):\n"+a.slice(-10).map((e,i)=>(i+1)+". «"+e.q+"»").join("\n")):"📭 مفيش متعلّم."});} else await tg("sendMessage",{chat_id:ADMIN_CHAT_ID,text:"❌ KV مش متصل."}); return; }
     if (text === "/stats"){ if(env&&env.KV){const us=await env.KV.list({prefix:"u:"}); let s=0; for(const k of us.keys){const u=await env.KV.get(k.name,"json"); if(u&&u.subscribed)s++;} const inv=(await env.KV.get("INVOICES","json"))||[]; await tg("sendMessage",{chat_id:ADMIN_CHAT_ID,text:`📊 عملاء: ${us.keys.length} · مشتركين: ${s} · إيصالات: ${inv.length}`});} else await tg("sendMessage",{chat_id:ADMIN_CHAT_ID,text:"❌ KV مش متصل."}); return; }
@@ -247,7 +238,7 @@ async function onMessage(msg, env){
     await tg("sendMessage",{chat_id:ADMIN_CHAT_ID, text:`🧾 إثبات دفع من ${name} (id: ${chatId}). راجعه واضغط للتأكيد:`, reply_markup:K([[B("✅ تأكيد الاشتراك","sub:"+chatId)]])});
     if(env&&env.KV){const inv=(await env.KV.get("INVOICES","json"))||[]; inv.push({id:String(chatId),name,ts:Date.now()}); await env.KV.put("INVOICES",JSON.stringify(inv));}
     await touch(env, chatId, name, "paid_pending");
-    await tg("sendMessage",{chat_id:chatId, text:"استلمنا الإيصال ✅ بنراجعه ونفعّلك حالًا يا Founder 👑"});
+    await tg("sendMessage",{chat_id:chatId, text:"استلمنا الإيصال ✅ بنراجعه ونفعّل اشتراكك حالًا 👑"});
     return;
   }
 
@@ -258,22 +249,26 @@ async function onMessage(msg, env){
   }
   if (text === "/start"){ await touch(env,chatId,name,"engaged"); const v=view("main"); await tg("sendMessage",{chat_id:chatId,text:v.text,reply_markup:v.kb}); return; }
 
-  // ---- match text bank ----
   await touch(env, chatId, name, "engaged");
   let item = matchStatic(text);
   if (!item){ const l = await matchLearned(text, env); if (l) item = {reply:l}; }
 
   if (item && item.menu){ const v=view(item.menu); await tg("sendMessage",{chat_id:chatId, text:v.text, reply_markup:v.kb}); return; }
-  if (item && item.sensitive){ // money-related typed -> approval gate
-    await tg("sendMessage",{chat_id:chatId, text:"تمام 🙌 ثواني وبرد عليك بالتفاصيل."});
-    await tg("sendMessage",{chat_id:ADMIN_CHAT_ID, text:`💰 استفسار دفع من ${name} (id: ${chatId}):\n«${text}»\n\n${MARK}${item.reply}`, reply_markup:K([[B("✅ موافقة وإرسال","ok:"+chatId)],[B("🪙 موافقة + صورة USDT","okq:"+chatId)],[B("✏️ تعديل","edit:"+chatId)]])});
+  if (item && item.personal){ // crypto / bank -> you send personally
+    await tg("sendMessage",{chat_id:chatId, text:"تمام 🙌 ثواني وأبعتلك التفاصيل."});
+    await tg("sendMessage",{chat_id:ADMIN_CHAT_ID, text:`🪙🏦 ${name} (id: ${chatId}) عايز يدفع كريبتو أو تحويل بنكي:\n«${text}»\n\nاضغط الزر وابعتله التفاصيل بنفسك:`, reply_markup:K([[B("✏️ رد على العميل","edit:"+chatId)]])});
+    await touch(env, chatId, name, "intent");
     return;
   }
-  if (item && item.reply){ // general -> auto reply + back-to-menu button
+  if (item && item.sensitive){ // payment/offer -> approval
+    await tg("sendMessage",{chat_id:chatId, text:"تمام 🙌 ثواني وبرد عليك بالتفاصيل."});
+    await tg("sendMessage",{chat_id:ADMIN_CHAT_ID, text:`💰 استفسار دفع من ${name} (id: ${chatId}):\n«${text}»\n\n${MARK}${item.reply}`, reply_markup:K([[B("✅ موافقة وإرسال","ok:"+chatId)],[B("✏️ تعديل","edit:"+chatId)]])});
+    return;
+  }
+  if (item && item.reply){
     await tg("sendMessage",{chat_id:chatId, text:item.reply, reply_markup:K([[B("📋 القائمة","m:main"), B("👑 اشترك","m:sub")]])});
     return;
   }
-  // unknown -> escalate to admin
   await tg("sendMessage",{chat_id:ADMIN_CHAT_ID, text:`🚩 سؤال جديد مالوش رد — من ${name} (id: ${chatId}):\n«${text}»\n\nاضغط الزر وردّ (وهحفظه للمرة الجاية):`, reply_markup:K([[B("🧠 رد + تعليم","learn:"+chatId)]])});
 }
 
@@ -292,17 +287,12 @@ async function onCallback(cq, env){
   const presser = String(cq.from.id);
   const chatId = cq.message ? cq.message.chat.id : cq.from.id;
 
-  // ----- Admin actions -----
-  if (presser === String(ADMIN_CHAT_ID) && /^(ok|okq|edit|sub):/.test(data)){
+  if (presser === String(ADMIN_CHAT_ID) && /^(ok|edit|sub):/.test(data)){
     const [action, custId] = data.split(":");
-    if (action === "ok" || action === "okq"){
+    if (action === "ok"){
       const t = cq.message.text || ""; const idx = t.indexOf(MARK);
       const ans = idx !== -1 ? t.slice(idx + MARK.length) : "";
-      if (ans){
-        await tg("sendMessage",{chat_id:Number(custId), text:ans});
-        if (action === "okq" && PAY.usdtQR) await tg("sendPhoto",{chat_id:Number(custId), photo:PAY.usdtQR, caption:"محفظة USDT ("+PAY.usdtNetwork+") 🪙"});
-        await tg("editMessageText",{chat_id:cq.message.chat.id, message_id:cq.message.message_id, text:t+"\n\n✅ اتبعت للعميل."+(action==="okq"&&!PAY.usdtQR?"\n⚠️ مفيش صورة USDT محفوظة — ابعتها بنفسك.":"")});
-      }
+      if (ans){ await tg("sendMessage",{chat_id:Number(custId), text:ans}); await tg("editMessageText",{chat_id:cq.message.chat.id, message_id:cq.message.message_id, text:t+"\n\n✅ اتبعت للعميل."}); }
     } else if (action === "edit"){
       await tg("sendMessage",{chat_id:ADMIN_CHAT_ID, text:`${EDITMARK}${custId}):`, reply_markup:{force_reply:true}});
     } else if (action === "sub"){
@@ -314,7 +304,6 @@ async function onCallback(cq, env){
     return;
   }
 
-  // ----- Customer navigation -----
   const name = ((cq.from.first_name||"")+" "+(cq.from.last_name||"")).trim() || "عميل";
   const [pre, arg] = data.split(":");
   async function show(v){ await tg("editMessageText",{chat_id:chatId, message_id:cq.message.message_id, text:v.text, reply_markup:v.kb}).catch(async()=>{ await tg("sendMessage",{chat_id:chatId, text:v.text, reply_markup:v.kb}); }); }
@@ -324,6 +313,6 @@ async function onCallback(cq, env){
   else if (pre === "cmp"){ await show({text:CMP[arg]||"—", kb:K([[B("👑 عايز أشترك","m:sub"), B("↩️ رجوع","m:compare")]])}); await touch(env,chatId,name,"considering"); }
   else if (pre === "rec"){ const r=REC[arg]; if(r){ await show({text:r[1]+"\n\n"+PKG[r[0]], kb:K([[B("👑 اشترك في دي","buy:"+(r[0].charAt(0).toUpperCase()+r[0].slice(1)))],[B("↩️ رجوع","m:help")]])}); await touch(env,chatId,name,"considering"); } }
   else if (pre === "faq"){ await show({text:FAQ[arg]||"—", kb:K([[B("👑 عايز أشترك","m:sub"), B("↩️ رجوع","m:faq")]])}); }
-  else if (pre === "buy"){ await requestPayment(env, chatId, name, arg); } // SENSITIVE -> admin approval
+  else if (pre === "buy"){ await requestPayment(env, chatId, name, arg); }
   await tg("answerCallbackQuery",{callback_query_id:cq.id});
 }
