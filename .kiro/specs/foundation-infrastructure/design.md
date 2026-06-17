@@ -610,18 +610,79 @@ export interface EvaluationJob {
 
 ## 9. Correctness Properties
 
-These are universally-quantified invariants the implementation must uphold (they will seed property-based tests):
+These are universally-quantified invariants the implementation must uphold (they will seed property-based tests). Each property is annotated with the requirements (from `requirements.md`) it validates.
 
-1. **Single source of truth:** for every learner there is exactly one `learner_profile` row keyed by `user_id`; `bootstrap` is idempotent.
-2. **Provider isolation:** for every AI request, the app calls only `AiApi`; no provider SDK is reachable from client code (the result always carries a `provider` tag set server-side).
-3. **Swappability:** for any registered Speech/Language adapter pair, `AiRouter` produces a valid normalized `PronunciationResult` / `CoachingFeedback` with identical shape — call sites are unchanged when providers swap.
-4. **Score bounds:** all scores (`overallScore`, every `accuracy`, all `SkillScores.*`, `AccentProfile.*`) always lie in [0,100].
-5. **Tenant isolation:** for any two distinct users A and B, A can never read or write B's profile, errors, recordings, or storage objects (RLS + path prefix).
-6. **Claim safety:** a `funnel_claim` token can be redeemed at most once and only before `expires_at`.
-7. **Audio path integrity:** every `recording_ref.storage_path` is prefixed `recordings/{user_id}/`.
-8. **Offline durability:** any recording accepted by `AudioCapture` is either successfully evaluated or remains in the Outbox (never silently lost).
-9. **Cost ceiling:** the number of billable AI ops for a user in a day never exceeds their tier's configured allowance.
-10. **Weakest-sound targeting:** after any pronunciation evaluation, `accentProfile.weakestSound` equals the target sound with the lowest score (so tomorrow's drill auto-targets it).
+### Property 1: Single source of truth
+
+*For any* learner, there is exactly one `learner_profile` row keyed by `user_id`, and `bootstrap` is idempotent (repeated bootstrap returns the same single profile rather than creating duplicates).
+
+**Validates: Requirements 3.1, 4.2, 5.3**
+
+### Property 2: Provider isolation
+
+*For any* AI request, the app calls only `AiApi`; no provider SDK is reachable from client code, and the result always carries a `provider` tag set server-side.
+
+**Validates: Requirements 1.3, 1.4, 8.1, 8.5**
+
+### Property 3: Swappability (normalized shape)
+
+*For any* registered Speech/Language adapter pair, `AiRouter` produces a valid normalized `PronunciationResult` / `CoachingFeedback` / `GenerationResult` with identical shape, so call sites are unchanged when providers swap.
+
+**Validates: Requirements 8.2, 8.3, 8.4**
+
+### Property 4: Score bounds
+
+*For any* Learner_Profile, all scores (`overallScore`, every phoneme/word `accuracy`, all `SkillScores.*`, and all `AccentProfile.*` metrics) lie in the range [0,100], and writes that would violate this range are rejected.
+
+**Validates: Requirements 3.4, 3.7**
+
+### Property 5: Enum validity
+
+*For any* candidate `level` and `sub_level`, the value is accepted if and only if `level` is an integer in [0,3] and `sub_level` is an integer in [1,12], and writes outside those bounds are rejected.
+
+**Validates: Requirements 3.3, 3.8**
+
+### Property 6: Tenant isolation
+
+*For any* two distinct users A and B, A can never read or write B's profile, error history, recordings, or storage objects (enforced by RLS plus the storage path prefix).
+
+**Validates: Requirements 4.3, 4.4, 7.9**
+
+### Property 7: Claim safety
+
+*For any* `funnel_claim` token, it can be redeemed at most once and only before `expires_at`; redemptions that are repeated or past expiry are rejected.
+
+**Validates: Requirements 6.4, 6.5**
+
+### Property 8: Audio path integrity
+
+*For any* recording, the signed upload URL and the persisted `recording_ref.storage_path` are prefixed `recordings/{user_id}/` for the owning learner.
+
+**Validates: Requirements 7.2, 7.4**
+
+### Property 9: Recording metadata round-trip
+
+*For any* recording metadata registered after a successful upload, fetching the archive returns equivalent metadata (kind, reference text, duration, byte size, accent score at time), and archive queries return only the owning learner's recordings matching any kind filter.
+
+**Validates: Requirements 7.5, 7.8**
+
+### Property 10: Offline durability
+
+*For any* recording accepted by `AudioCapture`, it is either successfully evaluated or remains in the Outbox (never silently lost), including after a mid-upload failure.
+
+**Validates: Requirements 8.7, 10.5, 10.7**
+
+### Property 11: Cost ceiling
+
+*For any* sequence of a learner's AI requests within a day, the number of billable AI ops never exceeds that learner's tier-configured allowance, and requests beyond the allowance are denied before any provider call.
+
+**Validates: Requirements 9.1, 9.2, 9.6**
+
+### Property 12: Weakest-sound targeting
+
+*For any* accent profile, after a pronunciation evaluation `accentProfile.weakestSound` equals the target sound with the lowest score (so tomorrow's drill auto-targets it), and is left unset when no target sound has a recorded score.
+
+**Validates: Requirements 3.5, 3.6**
 
 ---
 
