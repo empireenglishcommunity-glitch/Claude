@@ -1,15 +1,15 @@
 /**
- * Empire English — Telegram Assistant on CLOUDFLARE WORKERS  [No AI, 100% free, reliable]
+ * Empire English — Telegram Assistant on CLOUDFLARE WORKERS
+ * Keyword Answer Bank + Approval + AUTO-LEARN  [No AI, 100% free, reliable]
  *
- * Why Cloudflare: it returns a clean HTTP 200, so Telegram delivers every message
- * (Google Apps Script returns 302 -> Telegram stalls after the first message).
+ * - Customer asks -> bot finds a ready answer (static OR learned) -> sends to YOU
+ *   with [✅ Approve] [✏️ Edit]. Approve -> sent to customer.
+ * - Unknown question -> forwarded to YOU with [🧠 Reply + Teach]. You reply, it's sent
+ *   to the customer AND saved, so next time the same question is asked it's suggested.
  *
- * Flow (with your approval on every reply):
- *  Customer -> bot finds a keyword answer -> sends it to YOU with [✅ Approve] [✏️ Edit].
- *  Approve -> sent to customer. Edit -> you type your reply -> sent.
- *  No keyword match -> forwarded to you with [✏️ Reply].  Stateless (no database).
- *
- * SETUP: see SETUP.md (Cloudflare section). Fill the 2 values below, deploy, set webhook.
+ * Needs: (1) fill TELEGRAM_TOKEN + ADMIN_CHAT_ID below.
+ *        (2) bind a KV namespace named "KV" to enable learning (see SETUP.md).
+ *            Without KV it still works, just won't auto-learn.
  */
 
 // ======= عدّل دول بس =======
@@ -17,10 +17,11 @@ const TELEGRAM_TOKEN = "ضع_توكن_البوت_هنا";
 const ADMIN_CHAT_ID  = "ضع_رقمك_من_userinfobot_هنا";
 // ===========================
 
-const MARK = "🤖 الرد المقترح (راجعه قبل الإرسال):\n";
-const EDITMARK = "✏️ اكتب ردك للعميل (id: ";
+const MARK      = "🤖 الرد المقترح (راجعه قبل الإرسال):\n";
+const EDITMARK  = "✏️ اكتب ردك للعميل (id: ";
+const LEARNMARK = "🧠 اكتب الرد وهحفظه للمرة الجاية (id: ";
 
-// ====================== بنك الإجابات (عدّل/زوّد براحتك) ======================
+// ====================== بنك الإجابات الثابت (عدّل/زوّد براحتك) ======================
 const ANSWERS = [
   { keys:['عايز اشترك','هشترك','ينفع اشترك','اشترك','اشتراك','انضم','join','subscribe','register'],
     reply:`تمام 👑 الاشتراك سهل:
@@ -115,17 +116,17 @@ const ANSWERS = [
 // ====================================================================
 
 export default {
-  async fetch(req){
+  async fetch(req, env){
     if (req.method !== "POST") return new Response("Empire English bot is running ✅");
     let u;
     try { u = await req.json(); } catch(e){ return new Response("ok"); }
     try {
-      if (u.callback_query) await onCallback(u.callback_query);
-      else if (u.message)   await onMessage(u.message);
+      if (u.callback_query) await onCallback(u.callback_query, env);
+      else if (u.message)   await onMessage(u.message, env);
     } catch(err){
       await tg("sendMessage", {chat_id: ADMIN_CHAT_ID, text: "⚠️ خطأ: " + err});
     }
-    return new Response("ok"); // clean 200 -> Telegram keeps delivering
+    return new Response("ok");
   }
 };
 
@@ -146,7 +147,7 @@ function norm(s){
     .trim();
 }
 
-function matchAnswer(text){
+function matchStatic(text){
   const t = norm(text);
   if (!t) return null;
   for (const item of ANSWERS){
@@ -157,7 +158,16 @@ function matchAnswer(text){
   return null;
 }
 
-async function onMessage(msg){
+async function matchLearned(text, env){
+  if (!env || !env.KV) return null;
+  const t = norm(text);
+  if (!t) return null;
+  const arr = (await env.KV.get("LEARNED", "json")) || [];
+  for (const e of arr){ if (e.q && t.indexOf(e.q) !== -1) return e.reply; }
+  return null;
+}
+
+async function onMessage(msg, env){
   const chatId = msg.chat.id;
   const fromId = String(msg.from.id);
   const text = msg.text || "";
@@ -165,11 +175,34 @@ async function onMessage(msg){
   // ---- Admin ----
   if (fromId === String(ADMIN_CHAT_ID)){
     const rt = msg.reply_to_message;
-    if (rt && rt.text && rt.text.indexOf(EDITMARK) !== -1){
-      const m = rt.text.match(/id:\s*(-?\d+)/);
-      if (m){
-        await tg("sendMessage", {chat_id: Number(m[1]), text: text});
-        await tg("sendMessage", {chat_id: ADMIN_CHAT_ID, text: "✅ اتبعت ردك للعميل."});
+    if (rt && rt.text){
+      // Reply + Teach (unknown question)
+      if (rt.text.indexOf(LEARNMARK) !== -1){
+        const m = rt.text.match(/id:\s*(-?\d+)/);
+        if (m){
+          const cid = m[1];
+          await tg("sendMessage", {chat_id: Number(cid), text: text});
+          let learned = false;
+          if (env && env.KV){
+            const q = await env.KV.get("pending_" + cid);
+            if (q){
+              const arr = (await env.KV.get("LEARNED", "json")) || [];
+              arr.push({ q: norm(q), reply: text });
+              await env.KV.put("LEARNED", JSON.stringify(arr));
+              await env.KV.delete("pending_" + cid);
+              learned = true;
+            }
+          }
+          await tg("sendMessage", {chat_id: ADMIN_CHAT_ID, text: learned ? "✅ اتبعت ردك، واتحفظ السؤال ده عشان أرد بيه تلقائيًا المرة الجاية 🧠" : "✅ اتبعت ردك للعميل."});
+        }
+      }
+      // Plain edit (known answer)
+      else if (rt.text.indexOf(EDITMARK) !== -1){
+        const m = rt.text.match(/id:\s*(-?\d+)/);
+        if (m){
+          await tg("sendMessage", {chat_id: Number(m[1]), text: text});
+          await tg("sendMessage", {chat_id: ADMIN_CHAT_ID, text: "✅ اتبعت ردك للعميل."});
+        }
       }
     }
     return;
@@ -182,9 +215,11 @@ async function onMessage(msg){
   }
 
   const name = ((msg.from.first_name || "") + " " + (msg.from.last_name || "")).trim() || "عميل";
-  const answer = matchAnswer(text);
+  let answer = matchStatic(text);
+  if (!answer) answer = await matchLearned(text, env);
 
   if (answer){
+    // Known/learned -> send to YOU for approval
     await tg("sendMessage", {
       chat_id: ADMIN_CHAT_ID,
       text: `📩 رسالة من ${name} (id: ${chatId}):\n«${text}»\n\n${MARK}${answer}`,
@@ -194,15 +229,17 @@ async function onMessage(msg){
       ]]}
     });
   } else {
+    // Unknown -> remember the question (for learning) + ask you to reply & teach
+    if (env && env.KV) await env.KV.put("pending_" + chatId, text, {expirationTtl: 86400});
     await tg("sendMessage", {
       chat_id: ADMIN_CHAT_ID,
-      text: `🚩 سؤال جديد مالوش رد جاهز — من ${name} (id: ${chatId}):\n«${text}»\n\nاضغط الزر وردّ بنفسك:`,
-      reply_markup: { inline_keyboard: [[ {text: "✏️ رد على العميل", callback_data: "edit:" + chatId} ]] }
+      text: `🚩 سؤال جديد مالوش رد جاهز — من ${name} (id: ${chatId}):\n«${text}»\n\nاضغط الزر، اكتب الرد، وهبعته للعميل وأحفظه للمرة الجاية:`,
+      reply_markup: { inline_keyboard: [[ {text: "🧠 رد + تعليم", callback_data: "learn:" + chatId} ]] }
     });
   }
 }
 
-async function onCallback(cq){
+async function onCallback(cq, env){
   const [action, custId] = cq.data.split(":");
 
   if (action === "ok"){
@@ -215,6 +252,8 @@ async function onCallback(cq){
     }
   } else if (action === "edit"){
     await tg("sendMessage", {chat_id: ADMIN_CHAT_ID, text: `${EDITMARK}${custId}):`, reply_markup: {force_reply: true}});
+  } else if (action === "learn"){
+    await tg("sendMessage", {chat_id: ADMIN_CHAT_ID, text: `${LEARNMARK}${custId}):`, reply_markup: {force_reply: true}});
   }
   await tg("answerCallbackQuery", {callback_query_id: cq.id});
 }
