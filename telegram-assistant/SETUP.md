@@ -39,9 +39,17 @@
 4. **Deploy** → اقبل الصلاحيات (Authorize).
 5. هيطلعلك **Web app URL** (مش محتاج تنسخه).
 
-## الخطوة ٦: وصّل البوت (٣٠ ثانية)
-1. فوق، اختار الدالة **`setWebhook`** من القائمة → اضغط **Run**.
-2. لو ظهر في الـ Log حاجة فيها `"ok":true` → تمام، البوت اشتغل! ✅
+## الخطوة ٦: وصّل البوت (الطريقة المضمونة) ⚠️
+> مهم: متستخدمش `setWebhook` من المحرر — بيحط لينك `/dev` اللي تيليجرام بيرفضه (401). استخدم لينك `/exec` يدويًا:
+
+1. **Deploy → Manage deployments** → انسخ **Web app URL** (لازم ينتهي بـ **`/exec`**).
+2. اتأكد إن **Who has access = Anyone** (لو لأ: Edit ✏️ → غيّرها → Deploy).
+3. افتح ده في المتصفح (بدّل التوكن واللينك):
+```
+https://api.telegram.org/bot<التوكن>/setWebhook?url=<لينك_exec>
+```
+4. لازم يرجع `{"ok":true,...,"Webhook was set"}` ✅
+5. تأكيد: افتح `https://api.telegram.org/bot<التوكن>/getWebhookInfo` → لازم الـ url ينتهي بـ `/exec` ومفيش `last_error_message`.
 
 ---
 
