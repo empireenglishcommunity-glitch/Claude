@@ -18,7 +18,7 @@ const PAY = {
 };
 // ===========================
 
-const VERSION = "v11";
+const VERSION = "v12";
 const MARK = "💰 محتوى دفع للمراجعة (وافق قبل الإرسال):\n";
 const EDITMARK = "✏️ اكتب ردك للعميل (id: ";
 const LEARNMARK = "🧠 اكتب الرد وهحفظه للمرة الجاية (id: ";
@@ -69,6 +69,8 @@ const REMINDERS = [
 
 // text answer bank: menu = open buttons · sensitive = payment approval · personal = you handle · else auto-reply
 const ANSWERS = [
+  { keys:['قائمة','القائمة','منيو','menu','ابدأ','البداية','الرئيسية'], menu:"main" },
+  { keys:['الباقات','باقات','الاسعار','اسعار','السعر','بكام','الخطط','packages','price','الباقا'], menu:"packages" },
   { keys:['عايز اشترك','هشترك','اشترك','اشتراك','انضم','join','subscribe'], menu:"sub" },
   { keys:['طرق الدفع','ازاي ادفع','الدفع','ادفع','فودافون','انستا','instapay','باي بال','paypal'], sensitive:true, reply: payText(null) },
   { keys:['كريبتو','crypto','usdt','بينانس','binance','تحويل بنكي','حساب بنكي','حواله بنكيه'], personal:true },
@@ -269,6 +271,9 @@ async function onMessage(msg, env){
     await tg("sendMessage",{chat_id:chatId, text:item.reply, reply_markup:K([[B("📋 القائمة","m:main"), B("👑 اشترك","m:sub")]])});
     return;
   }
+  // unknown -> show the customer the menu (so they're never stuck) + notify admin
+  const vm = view("main");
+  await tg("sendMessage",{chat_id:chatId, text:"اختار من القائمة وأنا أساعدك 👇\n(ولو سؤالك مختلف، استنى ثواني وهنرد عليك)", reply_markup:vm.kb});
   await tg("sendMessage",{chat_id:ADMIN_CHAT_ID, text:`🚩 سؤال جديد مالوش رد — من ${name} (id: ${chatId}):\n«${text}»\n\nاضغط الزر وردّ (وهحفظه للمرة الجاية):`, reply_markup:K([[B("🧠 رد + تعليم","learn:"+chatId)]])});
 }
 
