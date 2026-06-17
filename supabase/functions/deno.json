@@ -1,0 +1,10 @@
+{
+  "//": "Deno configuration for Supabase Edge Functions (AI Abstraction Layer + funnel logic). Scaffold only — function code is added in later P1 tasks.",
+  "compilerOptions": {
+    "lib": ["deno.window"],
+    "strict": true
+  },
+  "imports": {
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@^2.108.2"
+  }
+}

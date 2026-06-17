@@ -17,103 +17,103 @@ This plan converts the approved `design.md` and `requirements.md` into an increm
 
 ## Tasks
 
-- [ ] 1. Scaffold the project, shared types, and test tooling
-  - [ ] 1.1 Establish the single-codebase project structure and tooling
+- [x] 1. Scaffold the project, shared types, and test tooling
+  - [x] 1.1 Establish the single-codebase project structure and tooling
     - Confirm/initialize the Expo + TypeScript + Expo Router app so it builds and launches a usable app shell on iOS, Android, and web from one codebase
     - Add the Supabase JS client dependency and a typed backend-client module (single entry point the SDK will wrap)
     - Add the test runner and `fast-check`; create a `__tests__` layout and npm scripts for unit, property, and integration test runs (single-run, not watch)
     - Create an Edge Functions workspace folder (TypeScript) for the AI Abstraction Layer and funnel logic
     - _Requirements: 1.1, 1.2_
 
-  - [ ] 1.2 Define the shared domain types (Layer 0 + AI contracts)
+  - [x] 1.2 Define the shared domain types (Layer 0 + AI contracts)
     - Implement the TypeScript domain model from design §4.1: `UUID`, `ISODateTime`, `Level`, `SubLevel`, `Tier`, `Region`, `DialectTendency`, `UiLocale`, `TargetSound`, `AccentSoundScore`, `AccentProfile`, `SkillScores`, `ErrorRecord`, `StreakState`, `RecordingRef`, `LearnerProfile`
     - Implement the AI contract types from design §5.1: `PhonemeScore`, `WordScore`, `PronunciationResult`, `AssessRequest`, `SpeechEngine`, `CoachingFeedback`, `FeedbackRequest`, `GenerationRequest`, `GenerationResult`, `LanguageEngine`
     - Implement the SDK and router contract types from design §5.2/§6: `AiProviderRegistry`, `CostGuard`, `AiRouter`, `AuthApi`, `ProfileApi`, `AudioApi`, `AiApi`, `AudioCapture`, `Outbox`, `EvaluationJob`
     - Export all types from a single shared module consumed by both app and Edge Functions
     - _Requirements: 3.2, 4.1, 8.2, 8.3_
 
-- [ ] 2. Implement the Unified Learner Profile data model, schema, and invariants (Layer 0)
-  - [ ] 2.1 Author the Postgres schema and migrations
+- [x] 2. Implement the Unified Learner Profile data model, schema, and invariants (Layer 0)
+  - [x] 2.1 Author the Postgres schema and migrations
     - Write the SQL migration from design §4.2: enum types (`tier_t`, `region_t`, `dialect_t`, `ui_locale_t`, `recording_kind_t`) and tables `learner_profile`, `error_record`, `recording_ref`, `funnel_claim` with their indexes
     - Add CHECK constraints for `level` (0–3) and the 12 valid sub-levels; set defaults (`ui_locale='ar'`, `tier='gate'`, `streak` JSON) and `updated_at`
     - _Requirements: 3.1, 3.2, 3.3_
 
-  - [ ] 2.2 Implement domain validators for profile invariants
+  - [x] 2.2 Implement domain validators for profile invariants
     - Implement validation/clamping for score bounds [0,100] across `overallAccentScore`, every `AccentSoundScore.score`, accent sub-metrics (`wordStress`, `linking`, `rhythm`, `intonation`), and all `SkillScores.*` — rejecting out-of-range writes and preserving the prior value
     - Implement level/sub-level validity (`level` integer in [0,3]; `sub_level` integer in [1,12]) — accept iff valid, reject otherwise
     - Implement the `updated_at` write-touch rule (set on any persisted field modification; unchanged on read)
     - _Requirements: 3.4, 3.7, 3.8, 4.6_
 
-  - [ ] 2.3 Implement the weakest-sound derivation
+  - [x] 2.3 Implement the weakest-sound derivation
     - Implement a pure function that, given an `AccentProfile`, sets `weakestSound` to the target sound with the lowest score, resolving ties by the defined target-sound ordering, and leaves it unset when no target sound has a recorded score
     - _Requirements: 3.5, 3.6_
 
-  - [ ]* 2.4 Write property test — score bounds
+  - [x]* 2.4 Write property test — score bounds
     - **Property 4: Score bounds** — for any profile, all scores lie in [0,100] and out-of-range writes are rejected with the prior value retained
     - **Validates: Requirements 3.4, 3.7**
 
-  - [ ]* 2.5 Write property test — enum validity
+  - [x]* 2.5 Write property test — enum validity
     - **Property 5: Enum validity** — a candidate `level`/`sub_level` is accepted iff `level` ∈ [0,3] and `sub_level` ∈ [1,12]; out-of-bounds writes rejected
     - **Validates: Requirements 3.3, 3.8**
 
-  - [ ]* 2.6 Write property test — weakest-sound targeting
+  - [x]* 2.6 Write property test — weakest-sound targeting
     - **Property 12: Weakest-sound targeting** — for any accent profile, `weakestSound` equals the lowest-scoring target sound (tie-broken by ordering) and is unset when none has a recorded score
     - **Validates: Requirements 3.5, 3.6**
 
-- [ ] 3. Implement Profile access SDK and Row-Level Security (tenant isolation)
-  - [ ] 3.1 Author RLS policies
+- [x] 3. Implement Profile access SDK and Row-Level Security (tenant isolation)
+  - [x] 3.1 Author RLS policies
     - Write SQL enabling RLS and the `own_profile`, `own_errors`, `own_recordings` policies from design §4.2 (`auth.uid() = user_id` for using + with-check)
     - _Requirements: 4.3, 4.4, 4.5_
 
-  - [ ] 3.2 Implement the `ProfileApi` SDK
+  - [x] 3.2 Implement the `ProfileApi` SDK
     - Implement `get`, `bootstrap` (idempotent — returns existing profile and creates no duplicate row, rejecting a second-row attempt with a profile-already-exists error), `updateScores`, `updateAccent` (invokes weakest-sound derivation), `appendError`, and `recordCoreDay`
     - Wire validators from Task 2.2/2.3 into all write paths; each operation returns the affected profile/record on success
     - _Requirements: 3.1, 3.9, 4.1, 4.2, 4.6_
 
-  - [ ]* 3.3 Write property test — single source of truth / bootstrap idempotency
+  - [x]* 3.3 Write property test — single source of truth / bootstrap idempotency
     - **Property 1: Single source of truth** — for any learner there is exactly one profile row; repeated `bootstrap` yields the same single profile identifier
     - **Validates: Requirements 3.1, 4.2, 5.3**
 
-  - [ ]* 3.4 Write integration test — tenant isolation under RLS
+  - [x]* 3.4 Write integration test — tenant isolation under RLS
     - **Property 6: Tenant isolation** — with two real auth users, A can never read/write B's profile, error history, or recordings; unauthenticated requests expose nothing
     - **Validates: Requirements 4.3, 4.4, 7.9**
 
-  - [ ]* 3.5 Write unit tests for ProfileApi write/read paths
+  - [x]* 3.5 Write unit tests for ProfileApi write/read paths
     - Cover `updateScores`, `appendError`, `recordCoreDay`, and the duplicate-bootstrap rejection edge case
     - _Requirements: 3.9, 4.1, 4.6_
 
-- [ ] 4. Implement authentication and account bootstrap
-  - [ ] 4.1 Implement the `AuthApi` SDK over Supabase Auth
+- [x] 4. Implement authentication and account bootstrap
+  - [x] 4.1 Implement the `AuthApi` SDK over Supabase Auth
     - Implement `signUp`, `signIn` (email/password and email OTP), `signOut`, and `getSession`; ensure issued JWT expiry ≤ 60 minutes and sign-out invalidates the session on the app within 5 seconds
     - On new-account creation, trigger idempotent profile bootstrap (reuse Task 3.2 `bootstrap`) so retries never create more than one profile; surface a safe-retry error if bootstrap fails
     - Reject invalid credentials (no session) and duplicate-email sign-up (no new profile)
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.6, 5.7, 5.8_
 
-  - [ ] 4.2 Enforce authenticated-session gating on protected operations
+  - [x] 4.2 Enforce authenticated-session gating on protected operations
     - Ensure profile, recording, and AI operations deny missing/expired/invalid session tokens with an unauthenticated error and return no protected data
     - _Requirements: 1.6, 5.5_
 
-  - [ ]* 4.3 Write unit/integration tests for auth flows
+  - [x]* 4.3 Write unit/integration tests for auth flows
     - Cover sign-up/sign-in (password + OTP), JWT expiry bound, sign-out invalidation timing, invalid-credential rejection, duplicate-email rejection, and bootstrap-failure safe retry
     - _Requirements: 5.1, 5.2, 5.4, 5.6, 5.7, 5.8_
 
-- [ ] 5. Implement the Telegram funnel claim-token handoff
-  - [ ] 5.1 Implement `createFunnelClaim` Edge Function
+- [x] 5. Implement the Telegram funnel claim-token handoff
+  - [x] 5.1 Implement `createFunnelClaim` Edge Function
     - Mint a single-use claim token recording Telegram id, tier, and region with `expires_at` ≤ 900s after creation; return a deep link (`empireenglish://claim?token=...`) that opens the app
     - Operate without exposing any Supabase service key to the bot
     - _Requirements: 6.1, 6.2, 6.7_
 
-  - [ ] 5.2 Implement `redeemFunnelClaim` Edge Function and SDK method
+  - [x] 5.2 Implement `redeemFunnelClaim` Edge Function and SDK method
     - Validate token (known/well-formed, unexpired, unredeemed); on success bootstrap the profile with carried tier/region/Telegram id and mark token redeemed (reuse idempotent bootstrap)
     - Reject already-redeemed (no profile change), expired (no bootstrap), and unknown/malformed (no bootstrap) tokens with the corresponding typed errors
     - Add `redeemFunnelClaim` to `AuthApi`
     - _Requirements: 6.3, 6.4, 6.5, 6.6_
 
-  - [ ]* 5.3 Write property test — claim safety
+  - [x]* 5.3 Write property test — claim safety
     - **Property 7: Claim safety** — for any claim token, it is redeemable at most once and only before `expires_at`; repeated or past-expiry redemptions are rejected
     - **Validates: Requirements 6.4, 6.5**
 
-  - [ ]* 5.4 Write integration test — funnel end-to-end (design §3.1)
+  - [x]* 5.4 Write integration test — funnel end-to-end (design §3.1)
     - createFunnelClaim → signUp → redeemFunnelClaim → profile bootstrapped with tier/region/Telegram id
     - _Requirements: 6.1, 6.2, 6.3_
 

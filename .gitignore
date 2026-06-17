@@ -26,7 +26,8 @@ yarn-error.*
 # macOS
 .DS_Store
 
-# env
+# env (never commit real secrets; .env.example IS tracked as the template)
+.env
 .env*.local
 
 # logs

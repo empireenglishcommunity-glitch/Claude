@@ -1,0 +1,381 @@
+{
+  "pbtResults": {
+    "2.4 Write property test — score bounds": {
+      "status": "passed",
+      "lastRunTimestamp": 1781737379683
+    },
+    "2.5 Write property test — enum validity": {
+      "status": "passed",
+      "lastRunTimestamp": 1781737380123
+    },
+    "2.6 Write property test — weakest-sound targeting": {
+      "status": "passed",
+      "lastRunTimestamp": 1781737380481
+    },
+    "3.3 Write property test — single source of truth / bootstrap idempotency": {
+      "status": "passed",
+      "lastRunTimestamp": 1781738034392
+    },
+    "3.4 Write integration test — tenant isolation under RLS": {
+      "status": "passed",
+      "lastRunTimestamp": 1781738037023
+    },
+    "5.3 Write property test — claim safety": {
+      "status": "passed",
+      "lastRunTimestamp": 1781739403405
+    }
+  },
+  "executionHistory": {
+    "1.1 Establish the single-codebase project structure and tooling": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300099
+      },
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736343202
+      },
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736803421
+      }
+    ],
+    "1.2 Define the shared domain types (Layer 0 + AI contracts)": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300102
+      },
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736807177
+      },
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781737019431
+      }
+    ],
+    "2.1 Author the Postgres schema and migrations": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300104
+      },
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781737029709
+      },
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781737545809
+      }
+    ],
+    "2.2 Implement domain validators for profile invariants": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300106
+      },
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781737548500
+      }
+    ],
+    "2.3 Implement the weakest-sound derivation": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300109
+      },
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781737551388
+      }
+    ],
+    "3.1 Author RLS policies": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300112
+      },
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781737574296
+      },
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781738074617
+      }
+    ],
+    "3.2 Implement the `ProfileApi` SDK": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300115
+      },
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781738077347
+      }
+    ],
+    "4.1 Implement the `AuthApi` SDK over Supabase Auth": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300117
+      },
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781738106337
+      },
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781738559262
+      }
+    ],
+    "4.2 Enforce authenticated-session gating on protected operations": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300119
+      },
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781738563001
+      }
+    ],
+    "5.1 Implement `createFunnelClaim` Edge Function": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300121
+      },
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781738572905
+      },
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781739529979
+      }
+    ],
+    "5.2 Implement `redeemFunnelClaim` Edge Function and SDK method": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300124
+      },
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781739531004
+      }
+    ],
+    "6. Checkpoint — Layer 0, auth, and funnel": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300126
+      }
+    ],
+    "7.1 Configure the private `recordings` bucket and storage path policy": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300128
+      }
+    ],
+    "7.2 Implement the `AudioApi` SDK": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300131
+      }
+    ],
+    "8.1 Implement the provider registry and a reference adapter contract": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300133
+      }
+    ],
+    "8.2 Implement the `CostGuard`": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300136
+      }
+    ],
+    "8.3 Implement the `AiRouter` Edge Function (single AI entry point)": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300138
+      }
+    ],
+    "8.4 Implement the client `AiApi` SDK (routes only through the backend)": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300141
+      }
+    ],
+    "9. Checkpoint — storage and AI Abstraction Layer": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300144
+      }
+    ],
+    "10.1 Implement Arabic-first / RTL i18n": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300146
+      }
+    ],
+    "10.2 Implement offline-resilient audio capture": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300148
+      }
+    ],
+    "10.3 Implement the offline Outbox and low-data mode": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300150
+      }
+    ],
+    "11.1 Wire the Foundation Client SDK into the app shell": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300153
+      }
+    ],
+    "12. Final checkpoint — full foundation": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781736300155
+      }
+    ],
+    "1. Scaffold the project, shared types, and test tooling": [
+      {
+        "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781737019434
+      }
+    ],
+    "2. Implement the Unified Learner Profile data model, schema, and invariants (Layer 0)": [
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781737551411
+      }
+    ],
+    "2.4 Write property test — score bounds": [
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781737555589
+      }
+    ],
+    "2.5 Write property test — enum validity": [
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781737558073
+      }
+    ],
+    "2.6 Write property test — weakest-sound targeting": [
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781737568536
+      }
+    ],
+    "3. Implement Profile access SDK and Row-Level Security (tenant isolation)": [
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781738077366
+      }
+    ],
+    "3.3 Write property test — single source of truth / bootstrap idempotency": [
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781738080130
+      }
+    ],
+    "3.4 Write integration test — tenant isolation under RLS": [
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781738082798
+      }
+    ],
+    "3.5 Write unit tests for ProfileApi write/read paths": [
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781738085813
+      }
+    ],
+    "4. Implement authentication and account bootstrap": [
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781738563003
+      }
+    ],
+    "4.3 Write unit/integration tests for auth flows": [
+      {
+        "executionId": "e7ea5fe2-b346-473c-ab69-ae1e9d927291",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781738566035
+      }
+    ],
+    "5. Implement the Telegram funnel claim-token handoff": [
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781739531008
+      }
+    ],
+    "5.3 Write property test — claim safety": [
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781739532006
+      }
+    ],
+    "5.4 Write integration test — funnel end-to-end (design §3.1)": [
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781739532718
+      }
+    ]
+  }
+}
