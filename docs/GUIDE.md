@@ -41,14 +41,27 @@ git clone -b launch-night-strategy https://github.com/empireenglishcommunity-gli
 ```
 Claude/
 ├── README.md
-├── GUIDE.md                              ← this guide
+├── app/                                  ← Expo Router screens (the mobile app)
+├── src/                                  ← App components, services, data, theme
+├── app.json · babel.config.js · package.json · tsconfig.json   ← Expo config
 │
-├── index.html                            ← Landing page (English)
-├── index-ar.html                         ← Landing page (Arabic / RTL)
+├── docs/                                 ← All guides & business docs
+│   ├── GUIDE.md                          ← this guide
+│   ├── PROJECT-CONTEXT.md                ← handoff / context doc
+│   ├── PROJECTS-CHECKLIST.md             ← what's done
+│   ├── EEC-Launch-Night-Playbook.md      ← Full launch strategy + scripts + posts + image prompts
+│   ├── EEC-Feasibility-Study.md          ← Egypt feasibility + salary-coverage math
+│   ├── EEC-International-Pricing-and-Feasibility.md  ← Gulf/worldwide pricing + feasibility
+│   └── تحدي-30-يوم-المنطقة-غير-المريحة.md  ← 30-day challenge program (Arabic)
 │
-├── EEC-Launch-Night-Playbook.md          ← Full launch strategy + scripts + posts + image prompts
-├── EEC-Feasibility-Study.md              ← Egypt feasibility + salary-coverage math
-├── EEC-International-Pricing-and-Feasibility.md  ← Gulf/worldwide pricing + feasibility
+├── web/                                  ← Standalone landing pages
+│   ├── index.html                        ← Landing page (English)
+│   └── index-ar.html                     ← Landing page (Arabic / RTL)
+│
+├── empire-challenge-bot/                 ← Discord challenge bot + all content
+│   ├── src/                              ← Bot code (Python)
+│   ├── data/                             ← Challenges, captions, scripts, posters
+│   └── README.md                         ← Bot setup guide
 │
 └── telegram-assistant/
     ├── worker.js                         ← ⭐ THE BOT (Cloudflare Worker) — the live one
