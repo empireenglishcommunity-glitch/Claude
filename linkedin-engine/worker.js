@@ -1,43 +1,52 @@
 /**
- * LinkedIn Content Engine — Phase 1 (Text + Telegram Cockpit) — Cloudflare Workers
+ * LinkedIn Content Engine — Cloudflare Worker (Phases 1–5)
  * --------------------------------------------------------------------------------
- * Generates a daily, brand-voice LinkedIn post (hook + body + hashtags) with Gemini
- * (free tier) and delivers it to YOU on Telegram with inline buttons:
+ * Generates a daily, brand-voice LinkedIn post and delivers it to YOU on Telegram
+ * with inline buttons. Nothing is auto-published — you approve with one tap, which is
+ * exactly what the 2026 LinkedIn algorithm rewards.
  *
- *      [✅ Approve & Save]  [✏️ Tweak]  [🔄 Regenerate]  [🔁 Other hook]  [⏭️ Skip]
+ *   Phase 1  Text engine + Telegram cockpit (hook + body + hashtags)
+ *   Phase 2  On-brand image per post (Cloudflare Workers AI / Flux)
+ *   Phase 3  Carousel PDF (Google Apps Script + Slides web app)
+ *   Phase 4  Publishing: copy block + optional webhook + /export batch
+ *   Phase 5  Reliability + self-tuning: evergreen bank, AI fallback chain,
+ *            approval-weighted topic rotation, comment seeder, idea inbox
  *
- * Nothing is ever auto-published. You stay in control with a ~60-second daily tap —
- * which is exactly what the 2026 LinkedIn algorithm rewards.
+ * Cockpit buttons:
+ *   [✅ Approve & Save] [🔄 Regenerate] [🔁 Other hook] [✏️ Tweak]
+ *   [🖼️ New image] [🎠 Carousel] [⏭️ Skip]
  *
- * Reliability: Gemini -> (optional Groq) -> built-in EVERGREEN bank, so you NEVER
- * have an empty day. Topic rotation avoids repeating the same pillar/format.
+ * Setup (see SETUP.md): bind KV namespace "KV", (optional) Workers AI binding "AI",
+ * add a daily Cron trigger, set TELEGRAM_TOKEN / ADMIN_CHAT_ID / GEMINI_API_KEY.
  *
- * Setup (see SETUP.md): bind a KV namespace named "KV", add a daily Cron trigger,
- * and set TELEGRAM_TOKEN, ADMIN_CHAT_ID, GEMINI_API_KEY (env vars OR the constants
- * just below — env vars win and are safer).
- *
- * Admin commands: /new  /queue  /clearqueue  /pillars  /version
+ * Admin commands: /new  /queue  /export  /clearqueue  /stats  /pillars  /version
  */
 
 // ============================================================
-//  1) SECRETS — prefer Cloudflare env vars; constants are fallback for quick paste
+//  1) SECRETS / INTEGRATIONS — prefer Cloudflare env vars; constants are fallbacks
 // ============================================================
 const TELEGRAM_TOKEN_FALLBACK = "PUT_YOUR_TELEGRAM_BOT_TOKEN_HERE";
 const ADMIN_CHAT_ID_FALLBACK  = "PUT_YOUR_TELEGRAM_CHAT_ID_HERE";
 const GEMINI_API_KEY_FALLBACK = "PUT_YOUR_GEMINI_API_KEY_HERE";
-const GROQ_API_KEY_FALLBACK   = ""; // optional secondary fallback (console.groq.com)
+const GROQ_API_KEY_FALLBACK   = ""; // optional secondary LLM fallback (console.groq.com)
 
-const VERSION = "linkedin-engine v1.0";
-const GEMINI_MODEL = "gemini-2.5-flash-lite"; // 1,000 free requests/day
+// Phase 3 — Google Apps Script carousel web app (see carousel.gs). Leave blank to disable.
+const CAROUSEL_WEBAPP_URL_FALLBACK = "";
+const CAROUSEL_TOKEN_FALLBACK      = "";
+
+// Phase 4 — optional publish webhook (Make/Zapier/Buffer/your own). Leave blank to disable.
+const PUBLISH_WEBHOOK_URL_FALLBACK = "";
+
+const VERSION = "linkedin-engine v2.0";
+const GEMINI_MODEL = "gemini-2.5-flash-lite";          // 1,000 free requests/day
 const GROQ_MODEL   = "llama-3.3-70b-versatile";
+const IMAGE_MODEL  = "@cf/black-forest-labs/flux-1-schnell"; // Workers AI (free quota)
 
 // ============================================================
-//  2) BRAND VOICE — this is the single biggest quality lever. EDIT THIS.
+//  2) BRAND VOICE — the single biggest quality lever. EDIT THIS.
 // ============================================================
-// Language for the posts: "en", "ar", or "mix" (let the model choose per topic).
-const LANGUAGE = "en";
+const LANGUAGE = "en"; // "en", "ar", or "mix"
 
-// A short, honest description of how YOU write. Be specific.
 const BRAND_VOICE = `
 I'm a multi-disciplinary personal-brand creator (investing, markets, trading, real
 estate, AI, marketing, social media, design, modeling, cooking, writing, life coaching,
@@ -47,8 +56,6 @@ lines. One idea per post. I write like a sharp friend who respects the reader's 
 `.trim();
 
 // 🔑 PASTE 6–10 OF YOUR BEST REAL LINKEDIN POSTS HERE (between the backticks).
-// This is what makes the output sound like YOU and not generic AI. Until you fill
-// these in, the engine still works but the voice will be more generic.
 const BEST_POSTS = [
 `// Example placeholder — replace with a real post of yours.
 Most people don't have a money problem. They have an attention problem.
@@ -59,20 +66,29 @@ Real estate taught me the lesson no course did: the deal is won before you negot
 It's won in the boring months when nobody's watching and you're still showing up.`,
 ];
 
-// Mike-Baxter-style sarcasm dial: 0 = never, 1 = light, 2 = medium, 3 = heavy.
-// It's applied PROBABILISTICALLY so it stays a seasoning, not a gimmick.
+// Mike-Baxter-style sarcasm dial: 0..3, applied probabilistically.
 const SARCASM_MAX_LEVEL = 2;
-const SARCASM_PROBABILITY = 0.25; // ~1 in 4 posts gets a sarcastic edge
+const SARCASM_PROBABILITY = 0.25;
 
-// Soft self-promotion. Every Nth post weaves in one of these brands with a light CTA.
+// Soft self-promotion rotation.
 const PROMO_EVERY_N_POSTS = 6;
 const PROMO_BRANDS = [
   "Macal Empire (my brand / business ventures)",
   "Empire English Community (my community for learning English with confidence)",
 ];
 
+// Phase 2 — fixed visual identity appended to every image prompt (your black + gold theme).
+const BRAND_IMAGE_STYLE =
+  "Premium minimalist editorial illustration, deep matte black background, elegant gold (#D4AF37) " +
+  "accents, refined royal/empire aesthetic, high contrast, lots of negative space, no text, no words, " +
+  "no logos, cinematic lighting, 4k, sophisticated and modern.";
+const AUTO_IMAGE = true; // auto-generate an image with each delivered draft (if AI binding present)
+
+// Phase 3 — small footer handle printed on carousel slides.
+const BRAND_HANDLE = "Macal Empire";
+
 // ============================================================
-//  3) CONTENT MATRIX — pillars + formats. Rotation avoids recent repeats.
+//  3) CONTENT MATRIX
 // ============================================================
 const PILLARS = [
   "investing", "financial markets", "trading", "real estate", "AI",
@@ -83,9 +99,9 @@ const PILLARS = [
 const FORMATS = [
   "contrarian take", "personal story", "actionable how-to", "numbered listicle",
   "mini case study", "myth-bust", "thought-provoking question", "lessons learned",
+  "carousel deep-dive",
 ];
 
-// 3–5 curated hashtags per pillar. Keep it tight — over-hashtagging looks spammy.
 const HASHTAG_BANK = {
   "investing":         ["#Investing", "#WealthBuilding", "#FinancialFreedom", "#MoneyMindset"],
   "financial markets": ["#Markets", "#Finance", "#Economy", "#Investing"],
@@ -102,21 +118,27 @@ const HASHTAG_BANK = {
   "entrepreneurship":  ["#Entrepreneurship", "#StartupLife", "#Business", "#Founder"],
 };
 
-const HOW_MANY_RECENT_TO_AVOID = 4; // don't reuse the last N pillars
+const HOW_MANY_RECENT_TO_AVOID = 4;
 
 // ============================================================
-//  4) EVERGREEN FALLBACK BANK — used if the AI is down/rate-limited. Never empty.
+//  4) EVERGREEN FALLBACK BANK — never an empty day
 // ============================================================
 const EVERGREEN = [
   { pillar:"entrepreneurship", hook:"Everyone wants the highlight reel. Nobody wants the reps.",
     body:"The highlight reel is 30 seconds.\nThe reps are 3 years.\n\nThe people you admire aren't more talented.\nThey just kept showing up on the days it felt pointless.\n\nConsistency isn't sexy. It's just undefeated.",
-    hashtags:["#Entrepreneurship", "#Discipline", "#Mindset"] },
+    hashtags:["#Entrepreneurship", "#Discipline", "#Mindset"],
+    image:"a single climber on a vast mountain at dawn, persistence and ambition",
+    comments:["What's one boring rep you're committing to this month?"] },
   { pillar:"investing", hook:"The best investment I ever made had a 0% return for 2 years.",
     body:"It was a skill, not a stock.\n\nIt paid nothing while I learned it.\nThen it paid for everything after.\n\nStop optimizing for this quarter. Start compounding for this decade.",
-    hashtags:["#Investing", "#WealthBuilding", "#MoneyMindset"] },
+    hashtags:["#Investing", "#WealthBuilding", "#MoneyMindset"],
+    image:"a small seed growing into a golden tree, long-term compounding",
+    comments:["What skill are you compounding right now?"] },
   { pillar:"AI", hook:"AI won't take your job. Someone using AI to do your job 10x faster will.",
     body:"The gap isn't human vs. machine.\nIt's people who learned the new tools vs. people who didn't.\n\nSpend one hour a week learning. In a year you'll be unrecognizable.",
-    hashtags:["#AI", "#FutureOfWork", "#Automation"] },
+    hashtags:["#AI", "#FutureOfWork", "#Automation"],
+    image:"a human hand and a robotic hand building something together, collaboration",
+    comments:["What's one AI tool that changed how you work?"] },
 ];
 
 // ============================================================
@@ -135,64 +157,99 @@ export default {
     return new Response("ok");
   },
 
-  // Daily cron (set e.g. "0 5 * * *"): generate today's post and deliver to Telegram.
+  // Daily cron (e.g. "0 5 * * *"): generate today's post and deliver to Telegram.
   async scheduled(event, env) {
     await generateAndDeliver(env, { reason: "daily" });
   },
 };
 
 // ============================================================
-//  6) HELPERS (mirrors the sales-bot style)
+//  6) HELPERS
 // ============================================================
-function TOKEN(env) { return (env && env.TELEGRAM_TOKEN) || TELEGRAM_TOKEN_FALLBACK; }
-function ADMIN(env) { return (env && env.ADMIN_CHAT_ID) || ADMIN_CHAT_ID_FALLBACK; }
-function GKEY(env)  { return (env && env.GEMINI_API_KEY) || GEMINI_API_KEY_FALLBACK; }
-function QKEY(env)  { return (env && env.GROQ_API_KEY) || GROQ_API_KEY_FALLBACK; }
+function TOKEN(env)         { return (env && env.TELEGRAM_TOKEN) || TELEGRAM_TOKEN_FALLBACK; }
+function ADMIN(env)         { return (env && env.ADMIN_CHAT_ID) || ADMIN_CHAT_ID_FALLBACK; }
+function GKEY(env)          { return (env && env.GEMINI_API_KEY) || GEMINI_API_KEY_FALLBACK; }
+function QKEY(env)          { return (env && env.GROQ_API_KEY) || GROQ_API_KEY_FALLBACK; }
+function CAROUSEL_URL(env)  { return (env && env.CAROUSEL_WEBAPP_URL) || CAROUSEL_WEBAPP_URL_FALLBACK; }
+function CAROUSEL_TOK(env)  { return (env && env.CAROUSEL_TOKEN) || CAROUSEL_TOKEN_FALLBACK; }
+function PUBLISH_URL(env)   { return (env && env.PUBLISH_WEBHOOK_URL) || PUBLISH_WEBHOOK_URL_FALLBACK; }
 
 async function tg(env, method, payload) {
   return fetch(`https://api.telegram.org/bot${TOKEN(env)}/${method}`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
   });
 }
+async function tgPhoto(env, chatId, bytes, caption) {
+  const form = new FormData();
+  form.append("chat_id", String(chatId));
+  if (caption) form.append("caption", caption);
+  form.append("photo", new Blob([bytes], { type: "image/png" }), "post.png");
+  return fetch(`https://api.telegram.org/bot${TOKEN(env)}/sendPhoto`, { method: "POST", body: form });
+}
 function K(rows) { return { inline_keyboard: rows }; }
 function B(t, d) { return { text: t, callback_data: d }; }
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function weightedPick(items, weights) {
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < items.length; i++) { r -= weights[i]; if (r <= 0) return items[i]; }
+  return items[items.length - 1];
+}
+function b64ToBytes(b64) {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
 
-// Marker embedded in the force-reply prompt so we can route the admin's tweak text.
 const TWEAKMARK = "✏️ Tweak instructions for draft #";
 
-// The inline keyboard shown under every delivered draft.
 function draftKeyboard() {
   return K([
     [B("✅ Approve & Save", "lp:ap"), B("🔄 Regenerate", "lp:rg")],
     [B("🔁 Other hook", "lp:hk"), B("✏️ Tweak", "lp:tw")],
+    [B("🖼️ New image", "lp:img"), B("🎠 Carousel", "lp:car")],
     [B("⏭️ Skip", "lp:sk")],
   ]);
 }
 
 // ============================================================
-//  7) TOPIC ROTATION
+//  7) TOPIC ROTATION (Phase 5: approval-weighted + idea inbox)
 // ============================================================
-function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-
 async function chooseTopic(env) {
-  let recent = [];
-  if (env && env.KV) recent = (await env.KV.get("recent", "json")) || [];
+  let recent = [], stats = {}, ideas = [];
+  if (env && env.KV) {
+    recent = (await env.KV.get("recent", "json")) || [];
+    stats  = (await env.KV.get("stats", "json")) || {};
+    ideas  = (await env.KV.get("ideas", "json")) || [];
+  }
+
+  // Idea inbox: if you texted the bot a raw idea, use (and consume) the oldest one.
+  let seed = null;
+  if (ideas.length) {
+    seed = ideas.shift().text;
+    if (env && env.KV) await env.KV.put("ideas", JSON.stringify(ideas));
+  }
+
   const recentPillars = recent.slice(-HOW_MANY_RECENT_TO_AVOID).map(r => r.pillar);
   let available = PILLARS.filter(p => !recentPillars.includes(p));
   if (available.length === 0) available = PILLARS.slice();
-  const pillar = pick(available);
+
+  // Weight by your own approve/skip behaviour (Laplace-smoothed). Self-tuning, free.
+  const weights = available.map(p => {
+    const s = stats[p] || { approved: 0, skipped: 0 };
+    return (s.approved + 1) / (s.approved + s.skipped + 2);
+  });
+  const pillar = weightedPick(available, weights);
   const format = pick(FORMATS);
 
-  // promo rotation counter
   let count = 0;
   if (env && env.KV) count = Number(await env.KV.get("post_count")) || 0;
   const isPromo = PROMO_EVERY_N_POSTS > 0 && (count + 1) % PROMO_EVERY_N_POSTS === 0;
   const promoBrand = isPromo ? pick(PROMO_BRANDS) : null;
-
-  // sarcasm dial (probabilistic)
   const sarcasm = Math.random() < SARCASM_PROBABILITY ? 1 + Math.floor(Math.random() * SARCASM_MAX_LEVEL) : 0;
 
-  return { pillar, format, isPromo, promoBrand, sarcasm };
+  return { pillar, format, isPromo, promoBrand, sarcasm, seed };
 }
 
 async function rememberTopic(env, topic) {
@@ -202,6 +259,14 @@ async function rememberTopic(env, topic) {
   await env.KV.put("recent", JSON.stringify(recent.slice(-20)));
   const count = (Number(await env.KV.get("post_count")) || 0) + 1;
   await env.KV.put("post_count", String(count));
+}
+
+async function bumpStat(env, pillar, key) {
+  if (!env || !env.KV || !pillar) return;
+  const stats = (await env.KV.get("stats", "json")) || {};
+  stats[pillar] = stats[pillar] || { approved: 0, skipped: 0 };
+  stats[pillar][key] = (stats[pillar][key] || 0) + 1;
+  await env.KV.put("stats", JSON.stringify(stats));
 }
 
 // ============================================================
@@ -219,6 +284,10 @@ function buildPrompt(topic, tweakInstruction) {
   const promoLine = topic.isPromo && topic.promoBrand
     ? `At the very end, weave in ONE soft, natural mention of "${topic.promoBrand}" with a light call-to-action. Do not make it salesy.`
     : "Do NOT promote any product or brand in this post. Pure value only.";
+
+  const seedLine = topic.seed
+    ? `\n- Base the post on THIS specific idea from me: "${topic.seed}"`
+    : "";
 
   const examples = BEST_POSTS
     .map((p, i) => `--- EXAMPLE ${i + 1} ---\n${p.replace(/^\/\/.*$/gm, "").trim()}`)
@@ -240,7 +309,7 @@ TODAY'S BRIEF:
 - Format: ${topic.format}
 - ${langLine}
 - ${sarcasmLine}
-- ${promoLine}
+- ${promoLine}${seedLine}
 
 RULES:
 - Write a scroll-stopping LinkedIn post that earns COMMENTS, not just likes.
@@ -250,11 +319,17 @@ RULES:
 - 80–200 words for the body.
 - End the body in a way that invites a reply or a comment.${tweakLine}
 
+Also provide:
+- "image_prompt": a short visual concept for an accompanying image (a scene/metaphor, NO text in the image).
+- "comments": 3 short, thoughtful first-comment ideas I could post myself to spark discussion.
+
 Return ONLY valid JSON (no code fences) with exactly this shape:
 {
-  "hooks": ["hook option 1", "hook option 2", "hook option 3"],
+  "hooks": ["hook 1", "hook 2", "hook 3"],
   "body": "the post body WITHOUT the hook line and WITHOUT hashtags",
-  "hashtags": ["#Tag1", "#Tag2", "#Tag3"]
+  "hashtags": ["#Tag1", "#Tag2", "#Tag3"],
+  "image_prompt": "visual concept, no text",
+  "comments": ["comment idea 1", "comment idea 2", "comment idea 3"]
 }`;
 }
 
@@ -305,7 +380,7 @@ async function callGroq(env, prompt) {
   return extractJson(text);
 }
 
-// Produce a draft object: { pillar, format, hooks[], hookIdx, body, hashtags[], source }
+// Draft: { pillar, format, hooks[], hookIdx, body, hashtags[], imagePrompt, comments[], source }
 async function generateDraft(env, topic, tweakInstruction) {
   const prompt = buildPrompt(topic, tweakInstruction);
   let out = await callGemini(env, prompt);
@@ -313,25 +388,83 @@ async function generateDraft(env, topic, tweakInstruction) {
   if (!out) { out = await callGroq(env, prompt); source = "groq"; }
 
   if (out && Array.isArray(out.hooks) && out.body) {
-    let hashtags = Array.isArray(out.hashtags) && out.hashtags.length ? out.hashtags : (HASHTAG_BANK[topic.pillar] || []).slice(0, 4);
+    const hashtags = Array.isArray(out.hashtags) && out.hashtags.length
+      ? out.hashtags : (HASHTAG_BANK[topic.pillar] || []).slice(0, 4);
     return {
       pillar: topic.pillar, format: topic.format,
       hooks: out.hooks.filter(Boolean).slice(0, 3),
-      hookIdx: 0, body: String(out.body).trim(),
-      hashtags, source,
+      hookIdx: 0, body: String(out.body).trim(), hashtags,
+      imagePrompt: out.image_prompt || `${topic.pillar}, professional conceptual illustration`,
+      comments: Array.isArray(out.comments) ? out.comments.slice(0, 3) : [],
+      source,
     };
   }
 
-  // Fallback: evergreen bank (never an empty day)
+  // Fallback: evergreen bank
   const ev = pick(EVERGREEN);
   return {
-    pillar: ev.pillar, format: "evergreen",
-    hooks: [ev.hook], hookIdx: 0, body: ev.body, hashtags: ev.hashtags, source: "evergreen",
+    pillar: ev.pillar, format: "evergreen", hooks: [ev.hook], hookIdx: 0,
+    body: ev.body, hashtags: ev.hashtags, imagePrompt: ev.image,
+    comments: ev.comments || [], source: "evergreen",
   };
 }
 
 // ============================================================
-//  9) RENDERING + DELIVERY
+//  9) IMAGE (Phase 2) + CAROUSEL (Phase 3)
+// ============================================================
+async function genImage(env, prompt) {
+  const ai = env && env.AI;
+  if (!ai || !prompt) return null;
+  try {
+    const full = prompt + ". " + BRAND_IMAGE_STYLE;
+    const res = await ai.run(IMAGE_MODEL, { prompt: full, seed: Math.floor(Math.random() * 1e6) });
+    if (res && typeof res.image === "string") return b64ToBytes(res.image);
+    if (res instanceof ReadableStream) return new Uint8Array(await new Response(res).arrayBuffer());
+    if (res instanceof ArrayBuffer) return new Uint8Array(res);
+    return null;
+  } catch (e) { return null; }
+}
+
+async function maybeSendImage(env, draft) {
+  if (!AUTO_IMAGE || !(env && env.AI)) return;
+  const bytes = await genImage(env, draft.imagePrompt);
+  if (bytes) await tgPhoto(env, ADMIN(env), bytes, "🖼️ Suggested image (tap 🖼️ New image to regenerate)").catch(() => {});
+}
+
+async function generateSlides(env, draft) {
+  const prompt = `Turn the LinkedIn post below into a punchy carousel of 6 slides.
+Slide 1 is a bold cover (just the big hook). Slides 2-5 each make ONE point (a few words title + one short line). Slide 6 is a call-to-action.
+Keep each field very short (titles <= 6 words, body <= 16 words). No markdown.
+
+POST:
+${renderPost(draft)}
+
+Return ONLY valid JSON: {"title":"deck title","slides":[{"title":"...","body":"..."}]}`;
+  let out = await callGemini(env, prompt);
+  if (!out) out = await callGroq(env, prompt);
+  if (out && Array.isArray(out.slides) && out.slides.length) return out;
+  return null;
+}
+
+async function buildCarousel(env, draft) {
+  const url = CAROUSEL_URL(env);
+  if (!url) return { error: "not configured (set CAROUSEL_WEBAPP_URL + CAROUSEL_TOKEN)" };
+  const slides = await generateSlides(env, draft);
+  if (!slides) return { error: "could not generate slide copy" };
+  try {
+    const res = await fetch(url, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: CAROUSEL_TOK(env), title: slides.title, slides: slides.slides, handle: BRAND_HANDLE }),
+    });
+    const txt = await res.text();
+    let j = null; try { j = JSON.parse(txt); } catch (e) { /* not json */ }
+    if (j && j.pdf_url) return { pdf_url: j.pdf_url, count: slides.slides.length };
+    return { error: (j && j.error) || ("web app response: " + txt.slice(0, 120)) };
+  } catch (e) { return { error: String(e) }; }
+}
+
+// ============================================================
+//  10) RENDERING + DELIVERY
 // ============================================================
 function renderPost(draft) {
   const hook = draft.hooks[draft.hookIdx] || draft.hooks[0] || "";
@@ -343,8 +476,9 @@ function renderTelegram(draft, topic) {
   const post = renderPost(draft);
   const meta = `📌 ${draft.pillar} · ${draft.format} · ✍️ ${draft.source}` +
     (topic && topic.isPromo ? " · 📣 promo" : "") +
-    (topic && topic.sarcasm ? ` · 😏 sarcasm ${topic.sarcasm}` : "");
-  return `🗓️ Your LinkedIn draft for today\n${meta}\n\n— — — — —\n${post}\n— — — — —\n\nReview and tap a button 👇`;
+    (topic && topic.sarcasm ? ` · 😏 sarcasm ${topic.sarcasm}` : "") +
+    (topic && topic.seed ? " · 💡 your idea" : "");
+  return `🗓️ Your LinkedIn draft\n${meta}\n\n— — — — —\n${post}\n— — — — —\n\nReview and tap a button 👇`;
 }
 
 async function generateAndDeliver(env, opts) {
@@ -352,12 +486,9 @@ async function generateAndDeliver(env, opts) {
   const draft = await generateDraft(env, topic);
 
   const sent = await tg(env, "sendMessage", {
-    chat_id: ADMIN(env),
-    text: renderTelegram(draft, topic),
-    reply_markup: draftKeyboard(),
+    chat_id: ADMIN(env), text: renderTelegram(draft, topic), reply_markup: draftKeyboard(),
   });
 
-  // Persist the draft keyed by the delivered message_id so callbacks can act on it.
   try {
     const j = await sent.json();
     const mid = j && j.result && j.result.message_id;
@@ -366,10 +497,12 @@ async function generateAndDeliver(env, opts) {
     }
     if (env && env.KV) await rememberTopic(env, topic);
   } catch (e) { /* ignore */ }
+
+  await maybeSendImage(env, draft);
 }
 
 // ============================================================
-//  10) MESSAGE HANDLING (admin only)
+//  11) MESSAGE HANDLING (admin only)
 // ============================================================
 async function onMessage(msg, env) {
   const fromId = String(msg.from && msg.from.id);
@@ -391,6 +524,7 @@ async function onMessage(msg, env) {
           chat_id: ADMIN(env), message_id: Number(mid),
           text: renderTelegram(draft, stored.topic), reply_markup: draftKeyboard(),
         });
+        await maybeSendImage(env, draft);
         return;
       }
     }
@@ -399,7 +533,7 @@ async function onMessage(msg, env) {
   }
 
   if (text === "/version") {
-    await tg(env, "sendMessage", { chat_id: ADMIN(env), text: "✅ " + VERSION + " · model: " + GEMINI_MODEL });
+    await tg(env, "sendMessage", { chat_id: ADMIN(env), text: "✅ " + VERSION + " · text:" + GEMINI_MODEL + " · img:" + IMAGE_MODEL });
     return;
   }
   if (text === "/new" || text === "/start") {
@@ -411,11 +545,26 @@ async function onMessage(msg, env) {
     await tg(env, "sendMessage", { chat_id: ADMIN(env), text: "📚 Pillars:\n• " + PILLARS.join("\n• ") });
     return;
   }
+  if (text === "/stats") {
+    const stats = (env && env.KV) ? ((await env.KV.get("stats", "json")) || {}) : {};
+    const rows = Object.keys(stats).sort().map(p => `${p}: ✅${stats[p].approved || 0} / ⏭️${stats[p].skipped || 0}`);
+    await tg(env, "sendMessage", { chat_id: ADMIN(env), text: rows.length ? "📊 Approve/skip by pillar:\n" + rows.join("\n") : "📊 No stats yet." });
+    return;
+  }
   if (text === "/queue") {
     const q = (env && env.KV) ? ((await env.KV.get("queue", "json")) || []) : [];
     if (!q.length) { await tg(env, "sendMessage", { chat_id: ADMIN(env), text: "📭 Approved queue is empty." }); return; }
     const list = q.slice(-10).map((p, i) => `${i + 1}. [${p.pillar}] ${(p.text || "").split("\n")[0].slice(0, 60)}…`).join("\n");
-    await tg(env, "sendMessage", { chat_id: ADMIN(env), text: `📥 Approved (${q.length}):\n${list}` });
+    await tg(env, "sendMessage", { chat_id: ADMIN(env), text: `📥 Approved (${q.length}). Use /export to dump them:\n${list}` });
+    return;
+  }
+  if (text === "/export") {
+    const q = (env && env.KV) ? ((await env.KV.get("queue", "json")) || []) : [];
+    if (!q.length) { await tg(env, "sendMessage", { chat_id: ADMIN(env), text: "📭 Nothing to export." }); return; }
+    // Send each approved post as its own message for easy batch pasting into LinkedIn's scheduler.
+    for (let i = 0; i < q.length; i++) {
+      await tg(env, "sendMessage", { chat_id: ADMIN(env), text: `📦 ${i + 1}/${q.length} [${q[i].pillar}]\n\n${q[i].text}` });
+    }
     return;
   }
   if (text === "/clearqueue") {
@@ -424,15 +573,27 @@ async function onMessage(msg, env) {
     return;
   }
 
-  // Anything else: quick help
-  await tg(env, "sendMessage", {
-    chat_id: ADMIN(env),
-    text: "👋 LinkedIn Content Engine\n\n/new — generate a draft now\n/queue — see approved posts\n/clearqueue — empty the queue\n/pillars — list topics\n/version",
-  });
+  // Unknown slash command -> help. Plain text -> idea inbox (Phase 5).
+  if (text.startsWith("/")) {
+    await tg(env, "sendMessage", {
+      chat_id: ADMIN(env),
+      text: "👋 LinkedIn Content Engine\n\n/new — generate a draft now\n/queue — see approved posts\n/export — dump approved posts to paste\n/clearqueue — empty the queue\n/stats — approve/skip by pillar\n/pillars — list topics\n/version\n\n💡 Tip: just text me any raw idea and I'll turn it into your next post.",
+    });
+    return;
+  }
+  if (text.length > 0) {
+    if (env && env.KV) {
+      const ideas = (await env.KV.get("ideas", "json")) || [];
+      ideas.push({ text, ts: Date.now() });
+      await env.KV.put("ideas", JSON.stringify(ideas.slice(-50)));
+    }
+    await tg(env, "sendMessage", { chat_id: ADMIN(env), text: "💡 Idea saved. I'll use it on your next draft — send /new to use it now." });
+    return;
+  }
 }
 
 // ============================================================
-//  11) CALLBACK HANDLING (button taps)
+//  12) CALLBACK HANDLING (button taps)
 // ============================================================
 async function onCallback(cq, env) {
   const presser = String(cq.from && cq.from.id);
@@ -461,9 +622,23 @@ async function onCallback(cq, env) {
       q.push({ pillar: draft.pillar, format: draft.format, text: post, ts: Date.now() });
       await env.KV.put("queue", JSON.stringify(q));
     }
+    await bumpStat(env, draft.pillar, "approved");
+
+    // Phase 4: optional publish webhook (Make/Zapier/Buffer/your endpoint).
+    if (PUBLISH_URL(env)) {
+      fetch(PUBLISH_URL(env), {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: post, pillar: draft.pillar, format: draft.format, hashtags: draft.hashtags }),
+      }).catch(() => {});
+    }
+
+    const comments = (draft.comments || []).filter(Boolean).slice(0, 3);
+    const commentBlock = comments.length
+      ? "\n\n💬 First-comment ideas (post one yourself to boost reach):\n• " + comments.join("\n• ")
+      : "";
     await tg(env, "editMessageText", {
       chat_id: chatId, message_id: mid,
-      text: "✅ APPROVED & SAVED\n\nCopy the block below and paste it into LinkedIn's native scheduler (or your queue):\n\n— — — — —\n" + post + "\n— — — — —",
+      text: "✅ APPROVED & SAVED\n\nCopy the block below into LinkedIn's native scheduler:\n\n— — — — —\n" + post + "\n— — — — —" + commentBlock,
     });
     await ack("Saved ✅");
     return;
@@ -495,7 +670,29 @@ async function onCallback(cq, env) {
     return;
   }
 
+  if (action === "img") {
+    await ack("Generating image…");
+    if (!(env && env.AI)) {
+      await tg(env, "sendMessage", { chat_id: ADMIN(env), text: "⚠️ Image needs the Workers AI binding named 'AI' (see SETUP.md)." });
+      return;
+    }
+    const bytes = await genImage(env, draft.imagePrompt);
+    if (bytes) await tgPhoto(env, chatId, bytes, "🖼️ " + draft.pillar + " — " + (draft.imagePrompt || "").slice(0, 80));
+    else await tg(env, "sendMessage", { chat_id: ADMIN(env), text: "⚠️ Image generation failed. Try again in a moment." });
+    return;
+  }
+
+  if (action === "car") {
+    await ack("Building carousel…");
+    await tg(env, "sendMessage", { chat_id: ADMIN(env), text: "🎠 Building your carousel PDF…" });
+    const r = await buildCarousel(env, draft);
+    if (r.pdf_url) await tg(env, "sendMessage", { chat_id: ADMIN(env), text: `🎠 Carousel ready (${r.count} slides):\n${r.pdf_url}\n\nUpload it to LinkedIn as a "document" post.` });
+    else await tg(env, "sendMessage", { chat_id: ADMIN(env), text: "⚠️ Carousel unavailable — " + r.error });
+    return;
+  }
+
   if (action === "sk") {
+    await bumpStat(env, draft.pillar, "skipped");
     if (env && env.KV) await env.KV.delete("draft:" + mid);
     await tg(env, "editMessageText", { chat_id: chatId, message_id: mid, text: "⏭️ Skipped. Send /new whenever you want another." });
     await ack("Skipped");

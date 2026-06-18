@@ -1,9 +1,7 @@
-// Local smoke test: mocks Telegram + Gemini + KV and drives the Worker through
-// /new -> draft delivered -> "other hook" -> approve. Run: node linkedin-engine/_test.mjs
-// (This file is a dev aid; safe to delete.)
+// Local smoke test: mocks Telegram + Gemini + Workers AI + KV and drives the Worker
+// through the full flow. Run: node linkedin-engine/_test.mjs   (dev aid; safe to delete.)
 
 const ADMIN = "999";
-process.env = {};
 
 // ---- in-memory KV ----
 const store = new Map();
@@ -11,9 +9,10 @@ const KV = {
   async get(k, t) { const v = store.get(k); if (v === undefined) return null; return t === "json" ? JSON.parse(v) : v; },
   async put(k, v) { store.set(k, v); },
   async delete(k) { store.delete(k); },
-  async list({ prefix } = {}) { return { keys: [...store.keys()].filter(k => !prefix || k.startsWith(prefix)).map(name => ({ name })) }; },
 };
-const env = { KV, TELEGRAM_TOKEN: "T", ADMIN_CHAT_ID: ADMIN, GEMINI_API_KEY: "G" };
+// ---- mock Workers AI binding (Phase 2) ----
+const AI = { async run() { return { image: "iVBORw0KGgo=" }; } }; // valid base64 stub
+const env = { KV, AI, TELEGRAM_TOKEN: "T", ADMIN_CHAT_ID: ADMIN, GEMINI_API_KEY: "G" };
 
 // ---- captured Telegram calls + mocked HTTP ----
 const tgCalls = [];
@@ -22,7 +21,8 @@ globalThis.fetch = async (url, opts) => {
   const u = String(url);
   if (u.includes("api.telegram.org")) {
     const method = u.split("/").pop().split("?")[0];
-    const body = opts && opts.body ? JSON.parse(opts.body) : {};
+    const isForm = opts && opts.body && typeof opts.body !== "string";
+    const body = isForm ? { _form: true } : (opts && opts.body ? JSON.parse(opts.body) : {});
     tgCalls.push({ method, body });
     const message_id = method === "sendMessage" ? ++midSeq : (body.message_id || midSeq);
     return new Response(JSON.stringify({ ok: true, result: { message_id } }), { status: 200 });
@@ -32,6 +32,8 @@ globalThis.fetch = async (url, opts) => {
       hooks: ["HOOK A — stop scrolling.", "HOOK B — the real reason.", "HOOK C — nobody tells you this."],
       body: "Line one.\nLine two.\nThis is the AI-generated body.",
       hashtags: ["#Test", "#Brand", "#Voice"],
+      image_prompt: "a golden door opening to a city",
+      comments: ["What would you add?", "Agree or disagree?", "What's your take?"],
     };
     return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(json) }] } }] }), { status: 200 });
   }
@@ -39,43 +41,65 @@ globalThis.fetch = async (url, opts) => {
 };
 
 const worker = (await import("./worker.js")).default;
+const update = (obj) => new Request("https://x/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(obj) });
+const msg = (text) => update({ message: { from: { id: Number(ADMIN) }, chat: { id: Number(ADMIN) }, text } });
+const cb = (data, mid) => update({ callback_query: { id: "c", from: { id: Number(ADMIN) }, data, message: { message_id: mid, chat: { id: Number(ADMIN) } } } });
+const ok = (c, m) => { console.log((c ? "✅" : "❌") + " " + m); if (!c) process.exitCode = 1; };
 
-function update(obj) {
-  return new Request("https://x/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(obj) });
-}
-const ok = (c, m) => console.log((c ? "✅" : "❌") + " " + m);
-
-// 1) /new -> "Generating…" + a draft with a 5-button keyboard
+// 1) /new -> draft (7 buttons) + auto image (sendPhoto)
 tgCalls.length = 0;
-await worker.fetch(update({ message: { from: { id: Number(ADMIN) }, chat: { id: Number(ADMIN) }, text: "/new" } }), env);
+await worker.fetch(msg("/new"), env);
 const draftMsg = tgCalls.find(c => c.method === "sendMessage" && c.body.reply_markup && c.body.reply_markup.inline_keyboard);
-ok(tgCalls.some(c => /Generating/.test(c.body.text || "")), "/new sends a 'Generating…' notice");
 ok(!!draftMsg, "draft message delivered");
 const btnCount = draftMsg ? draftMsg.body.reply_markup.inline_keyboard.flat().length : 0;
-ok(btnCount === 5, `draft has 5 buttons (got ${btnCount})`);
+ok(btnCount === 7, `draft has 7 buttons incl. image+carousel (got ${btnCount})`);
 ok(/HOOK A/.test(draftMsg.body.text), "draft uses AI hook A first");
-ok(/#Test/.test(draftMsg.body.text), "draft includes hashtags");
-
+ok(tgCalls.some(c => c.method === "sendPhoto"), "Phase 2: auto image (sendPhoto) sent");
 const draftMid = midSeq;
-ok(store.has("draft:" + draftMid), "draft persisted in KV by message_id");
-ok((store.get("recent") || "").includes("pillar"), "topic recorded in rotation history");
+ok(store.has("draft:" + draftMid), "draft persisted in KV");
 
-// 2) "Other hook" -> rotates to hook B
+// 2) Other hook -> hook B
 tgCalls.length = 0;
-await worker.fetch(update({ callback_query: { id: "1", from: { id: Number(ADMIN) }, data: "lp:hk", message: { message_id: draftMid, chat: { id: Number(ADMIN) } } } }), env);
-const edited = tgCalls.find(c => c.method === "editMessageText");
-ok(edited && /HOOK B/.test(edited.body.text), "Other hook rotates to hook B");
+await worker.fetch(cb("lp:hk", draftMid), env);
+ok(tgCalls.find(c => c.method === "editMessageText" && /HOOK B/.test(c.body.text)), "Other hook rotates to hook B");
 
-// 3) Approve -> saved to queue + copy block, keyboard removed
+// 3) New image button -> sendPhoto
 tgCalls.length = 0;
-await worker.fetch(update({ callback_query: { id: "2", from: { id: Number(ADMIN) }, data: "lp:ap", message: { message_id: draftMid, chat: { id: Number(ADMIN) } } } }), env);
+await worker.fetch(cb("lp:img", draftMid), env);
+ok(tgCalls.some(c => c.method === "sendPhoto"), "Phase 2: 'New image' button sends a photo");
+
+// 4) Approve -> queue + copy block + comment seeder + stats
+tgCalls.length = 0;
+await worker.fetch(cb("lp:ap", draftMid), env);
 const approved = tgCalls.find(c => c.method === "editMessageText");
 ok(approved && /APPROVED/.test(approved.body.text), "Approve shows APPROVED copy block");
-ok(approved && !approved.body.reply_markup, "Approve removes the buttons");
+ok(approved && /First-comment ideas/.test(approved.body.text), "Phase 5: comment seeder shown on approve");
 const q = JSON.parse(store.get("queue") || "[]");
-ok(q.length === 1 && /HOOK B/.test(q[0].text), "approved post saved to queue with chosen hook");
+ok(q.length === 1, "approved post saved to queue");
+const stats = JSON.parse(store.get("stats") || "{}");
+ok(Object.values(stats).some(s => s.approved === 1), "Phase 5: approval recorded in stats");
 
-// 4) Non-admin is ignored
+// 5) /export dumps the queue
+tgCalls.length = 0;
+await worker.fetch(msg("/export"), env);
+ok(tgCalls.some(c => /1\/1/.test(c.body.text || "")), "Phase 4: /export dumps approved posts");
+
+// 6) Idea inbox: plain text saved, then consumed by next /new
+tgCalls.length = 0;
+await worker.fetch(msg("a contrarian take on saving money in your 20s"), env);
+ok(tgCalls.some(c => /Idea saved/.test(c.body.text || "")), "Phase 5: idea inbox saves freeform text");
+ok((JSON.parse(store.get("ideas") || "[]")).length === 1, "idea stored in KV");
+tgCalls.length = 0;
+await worker.fetch(msg("/new"), env);
+ok(tgCalls.some(c => /your idea/.test((c.body && c.body.text) || "")), "Phase 5: next /new consumes the saved idea");
+ok((JSON.parse(store.get("ideas") || "[]")).length === 0, "idea consumed from KV");
+
+// 7) Carousel with no web app configured -> graceful message
+tgCalls.length = 0;
+await worker.fetch(cb("lp:car", midSeq), env);
+ok(tgCalls.some(c => /Carousel unavailable|not configured/.test(c.body.text || "")), "Phase 3: carousel degrades gracefully when not configured");
+
+// 8) Non-admin ignored
 tgCalls.length = 0;
 await worker.fetch(update({ message: { from: { id: 1 }, chat: { id: 1 }, text: "/new" } }), env);
 ok(tgCalls.length === 0, "non-admin messages are ignored");

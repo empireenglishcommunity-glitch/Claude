@@ -3,7 +3,7 @@
 Generates a daily, **brand-voice** LinkedIn post (hook + body + hashtags) with Gemini's
 free tier and sends it to you on **Telegram** with buttons:
 
-> **[✅ Approve & Save]  [🔄 Regenerate]  [🔁 Other hook]  [✏️ Tweak]  [⏭️ Skip]**
+> **[✅ Approve & Save] [🔄 Regenerate] [🔁 Other hook] [✏️ Tweak] [🖼️ New image] [🎠 Carousel] [⏭️ Skip]**
 
 Nothing is auto-published. You tap once (~60 seconds), copy the approved block, and paste
 it into LinkedIn's free native scheduler. That human touch is exactly what the 2026
@@ -35,8 +35,10 @@ algorithm rewards — and it keeps you 100% inside LinkedIn's Terms.
    | `GROQ_API_KEY` | *(optional)* |
    > Don't want to use variables? You can instead paste the values into the `*_FALLBACK`
    > constants at the top of `worker.js`. Variables are safer.
-4. **Settings → Bindings → Add → KV namespace** → create one (e.g. `linkedin-kv`) → set
-   **Variable name = `KV`** exactly → **Deploy**.
+4. **Settings → Bindings** →
+   - **Add → KV namespace** → create one (e.g. `linkedin-kv`) → set **Variable name = `KV`** exactly.
+   - **Add → AI** (Workers AI) → set **Variable name = `AI`** (this powers image generation, Phase 2). Optional but recommended.
+   - **Deploy**.
 5. **Connect Telegram** — open this URL in your browser (swap in your token + worker URL):
    ```
    https://api.telegram.org/bot<TOKEN>/setWebhook?url=<YOUR_WORKER_URL>&drop_pending_updates=true
@@ -68,7 +70,38 @@ npx wrangler deploy
   for a brand-new angle, **✅ Approve & Save** to store it and get a clean copy block.
 - Every morning the cron sends one automatically.
 
-**Admin commands:** `/new` · `/queue` · `/clearqueue` · `/pillars` · `/version`
+**Admin commands:** `/new` · `/queue` · `/export` · `/clearqueue` · `/stats` · `/pillars` · `/version`
+
+---
+
+## The phases (what each button/feature does)
+
+**Phase 1 — Text + cockpit** (works out of the box)
+Daily draft to Telegram. Buttons: Approve / Regenerate / Other hook / Tweak / Skip.
+
+**Phase 2 — Images** (needs the `AI` binding)
+Each draft auto-generates an on-brand image (matte black + gold) via Cloudflare Workers AI
+(Flux). Tap **🖼️ New image** to regenerate. Edit `BRAND_IMAGE_STYLE` in `worker.js` to change
+the look; set `AUTO_IMAGE = false` to only generate on demand and save quota.
+
+**Phase 3 — Carousels** (needs the Apps Script web app)
+Tap **🎠 Carousel** → the engine writes 6 slides, builds a branded Google Slides deck, exports
+a PDF, and sends you the link. Upload that PDF to LinkedIn as a **document** post.
+Setup: open `carousel.gs`, follow its header steps (paste into script.google.com, add a `TOKEN`
+script property, deploy as a Web app), then set `CAROUSEL_WEBAPP_URL` + `CAROUSEL_TOKEN` on the
+Worker (same token string on both sides).
+
+**Phase 4 — Publishing**
+- Default: **Approve** gives you a clean copy block to paste into LinkedIn's free native scheduler.
+- Batch: **/export** dumps every approved post as separate messages for fast weekly scheduling.
+- Optional: set `PUBLISH_WEBHOOK_URL` and each approved post is also POSTed there (wire it to
+  Buffer / Make / Zapier / your own endpoint).
+
+**Phase 5 — Reliability + self-tuning** (automatic)
+- Fallback chain: Gemini → Groq → built-in evergreen bank (never an empty day).
+- Topic rotation self-tunes from your own **approve/skip** behaviour (see `/stats`).
+- Every approved post comes with **3 first-comment ideas** (post one to boost reach).
+- **Idea inbox:** just text the bot any raw idea — it becomes your next draft.
 
 ---
 
@@ -81,6 +114,7 @@ Open `worker.js` and edit the **BRAND VOICE** block near the top:
   for voice quality. The placeholders work, but your real posts make it sound like you.
 - **`SARCASM_MAX_LEVEL` / `SARCASM_PROBABILITY`** — your Mike-Baxter dial (default: medium, ~1 in 4 posts).
 - **`PROMO_EVERY_N_POSTS` / `PROMO_BRANDS`** — how often it softly mentions Macal Empire / Empire English Community (default: every 6th post).
+- **`BRAND_IMAGE_STYLE` / `BRAND_HANDLE`** — the look of generated images and the footer on carousels.
 - **`LANGUAGE`** — `"en"`, `"ar"`, or `"mix"`.
 - **`PILLARS` / `FORMATS` / `HASHTAG_BANK`** — your topics, post styles, and hashtags.
 

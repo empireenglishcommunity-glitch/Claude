@@ -13,6 +13,10 @@ compatibility_date = "2025-06-01"
 binding = "KV"
 id = "PUT_YOUR_KV_NAMESPACE_ID_HERE"
 
+# --- Workers AI (Phase 2: image generation). Free quota (~230 images/day). ---
+[ai]
+binding = "AI"
+
 # --- Daily cron: generate + deliver one draft to Telegram ---
 # "0 5 * * *" = 05:00 UTC daily (07:00 Cairo / 09:00 Dubai). Adjust as you like.
 [triggers]
@@ -23,6 +27,9 @@ crons = ["0 5 * * *"]
 #   npx wrangler secret put TELEGRAM_TOKEN
 #   npx wrangler secret put ADMIN_CHAT_ID
 #   npx wrangler secret put GEMINI_API_KEY
-#   npx wrangler secret put GROQ_API_KEY      # optional
+#   npx wrangler secret put GROQ_API_KEY            # optional (fallback LLM)
+#   npx wrangler secret put CAROUSEL_WEBAPP_URL     # optional (Phase 3)
+#   npx wrangler secret put CAROUSEL_TOKEN          # optional (Phase 3)
+#   npx wrangler secret put PUBLISH_WEBHOOK_URL     # optional (Phase 4)
 [vars]
 # (intentionally empty — use secrets for tokens/keys)

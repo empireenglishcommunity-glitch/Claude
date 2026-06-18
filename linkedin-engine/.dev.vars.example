@@ -13,3 +13,10 @@ GEMINI_API_KEY=put-your-gemini-api-key-here
 
 # OPTIONAL secondary fallback LLM, free, from https://console.groq.com
 GROQ_API_KEY=
+
+# OPTIONAL (Phase 3) Google Apps Script carousel web app — see carousel.gs
+CAROUSEL_WEBAPP_URL=
+CAROUSEL_TOKEN=
+
+# OPTIONAL (Phase 4) publish webhook (Make/Zapier/Buffer/your own endpoint)
+PUBLISH_WEBHOOK_URL=

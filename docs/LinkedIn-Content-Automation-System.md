@@ -193,30 +193,38 @@ checkpoint + comment engagement — *better* reach than full autopilot.
 
 ### Phased build (each phase is independently useful)
 
+> ✅ **Status: Phases 1–5 are built** and live in `linkedin-engine/` (single Cloudflare
+> Worker `worker.js` + `carousel.gs` Apps Script). All flows are covered by a smoke test
+> (`linkedin-engine/_test.mjs`). Phase 0 (your brand corpus) is the only remaining manual
+> step, and the Google Sheet analytics log is optional (self-tuning currently uses your
+> in-app approve/skip behaviour instead — no Sheet required).
+
 **Phase 0 — Brand-voice corpus (you, ~1 hour, one-time).**
 Collect your 8–10 best-performing posts + a written description of your voice. This is the fuel for
-everything; quality of output is capped by this.
+everything; quality of output is capped by this. *(Paste them into `BEST_POSTS` in `worker.js`.)*
 
-**Phase 1 — Text engine (MVP, ~1 evening).**
-Cloudflare Worker + KV: topic matrix + Gemini draft + 3 hooks + hashtags → delivered to Telegram
-with Approve/Tweak/Regenerate buttons. Log to a Google Sheet. *(This alone removes ~70% of your
-daily effort.)*
+**Phase 1 — Text engine ✅ built.**
+Cloudflare Worker + KV: approval-weighted topic matrix + Gemini draft + 3 hooks + hashtags →
+delivered to Telegram with Approve/Regenerate/Other-hook/Tweak/Skip buttons.
+*(This alone removes ~70% of your daily effort.)*
 
-**Phase 2 — Image engine (~half evening).**
-Add Cloudflare Workers AI (Flux-schnell) with the fixed brand-style suffix; attach image to the
-Telegram package; store in R2/Drive.
+**Phase 2 — Image engine ✅ built.**
+Cloudflare Workers AI (Flux-schnell) with the fixed `BRAND_IMAGE_STYLE` suffix; auto-attaches an
+on-brand image to each draft (toggle `AUTO_IMAGE`), plus a "🖼️ New image" button to regenerate.
 
-**Phase 3 — Carousel engine (~1 evening).**
-Apps Script: branded Google Slides template → fill with Gemini slide copy → export PDF → Drive →
-link in Telegram. Triggered only when the day's format = `carousel-deep-dive`.
+**Phase 3 — Carousel engine ✅ built.**
+`carousel.gs` Apps Script: branded Google Slides deck filled with Gemini slide copy → exported as
+PDF → shareable link in Telegram via the "🎠 Carousel" button. Upload the PDF to LinkedIn as a
+document post.
 
-**Phase 4 — Publishing integration (~half evening).**
-Wire Approve → Buffer free queue (hands-off) and/or a clean "copy block" formatted for one-paste
-into LinkedIn's native scheduler.
+**Phase 4 — Publishing integration ✅ built.**
+Approve → clean copy block for LinkedIn's native scheduler; `/export` for weekly batch scheduling;
+optional `PUBLISH_WEBHOOK_URL` to push approved posts to Buffer/Make/Zapier/your endpoint.
 
-**Phase 5 — Reliability + self-tuning (~1 evening).**
-Add the 50-post evergreen buffer in KV; add the AI fallback chain (Flash-Lite → Flash → Groq →
-evergreen); read Sheet analytics back to re-weight topic rotation.
+**Phase 5 — Reliability + self-tuning ✅ built.**
+Evergreen fallback bank in code; AI fallback chain (Gemini → Groq → evergreen); topic rotation
+self-tunes from your approve/skip behaviour (`/stats`); comment-seeder ideas on every approval;
+and an idea inbox (text the bot any thought → it becomes your next draft).
 
 ---
 
