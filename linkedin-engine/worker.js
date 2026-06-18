@@ -43,49 +43,66 @@ const GROQ_MODEL   = "llama-3.3-70b-versatile";
 const IMAGE_MODEL  = "@cf/black-forest-labs/flux-1-schnell"; // Workers AI (free quota)
 
 // ============================================================
-//  2) BRAND VOICE — the single biggest quality lever. EDIT THIS.
+//  2) BRAND VOICE — encoded from MACAL_Brand_Bible.docx (see brand/macal-brand-bible.md)
 // ============================================================
 const LANGUAGE = "en"; // "en", "ar", or "mix"
 
+// "Common Sense First" — the MACAL Empire / Mike-Baxter-inspired voice.
 const BRAND_VOICE = `
-I'm a multi-disciplinary personal-brand creator (investing, markets, trading, real
-estate, AI, marketing, social media, design, modeling, cooking, writing, life coaching,
-entrepreneurship). My voice is direct, confident, and practical. I share real lessons,
-strong opinions, and tactical takeaways — never vague motivational fluff. Short punchy
-lines. One idea per post. I write like a sharp friend who respects the reader's time.
+MACAL Empire voice — "Common Sense First". I cut through noise, jargon, and hype with
+straight talk and proven principles. Persona: a seasoned operator (real estate, markets,
+capital protection) who's been through multiple cycles. Three tones, always blended:
+- Authoritative but NOT arrogant — authority comes from proof and reps, never posturing.
+- Sarcastic but NEVER cruel — sarcasm is a scalpel that exposes absurdity, not a weapon.
+- Paternal / protective — I warn the reader like a father who wishes someone had warned him.
+Worldview: hard work beats hype every time; if it sounds too good to be true, grab your
+wallet; the best tool is the one that works; complexity is often a smokescreen; respect is
+earned by showing up and delivering. Underneath everything: family, legacy, and protecting
+people's futures. Plain-spoken, experienced, honest, direct, unapologetic, grounded, real.
 `.trim();
 
-// 🔑 PASTE 6–10 OF YOUR BEST REAL LINKEDIN POSTS HERE (between the backticks).
+// Few-shot anchors written in the MACAL voice (derived from the brand bible's templates and
+// example transformations). Replace/extend with your own real top posts when you have them.
 const BEST_POSTS = [
-`// Example placeholder — replace with a real post of yours.
-Most people don't have a money problem. They have an attention problem.
-You can't out-earn a mind that's scattered across 14 browser tabs and 3 side hustles.
-Pick one game. Learn its rules cold. Then play it for 5 years instead of 5 weeks.`,
-`// Example placeholder — replace with a real post of yours.
-Real estate taught me the lesson no course did: the deal is won before you negotiate.
-It's won in the boring months when nobody's watching and you're still showing up.`,
+`You know what's crazy? People are paying $800,000 for a 600-square-foot condo because it has "smart home features."
+It has a Wi-Fi thermostat, Karen. That's not smart. That's a thermostat with an app.
+Here's the common-sense version: a home is shelter that holds its value. Not a gadget you finance for 30 years.
+You don't build wealth chasing shiny features. You build it on fundamentals — location, cash flow, and a price that makes sense.
+The market doesn't care how cool your thermostat is. It cares whether you overpaid.
+We don't do hype. We do homework.`,
+`They promise passive income with zero effort.
+I'll promise you this: the only thing passive about that plan is how passively you'll watch your money disappear.
+Real estate is like hunting. You don't bag a trophy buck by sitting on the couch posting about it. You scout. You wait. You prepare. Then you move.
+The "overnight success" guys are selling you the highlight reel and skipping the three years of boring reps that actually built it.
+Do the homework or be the lesson. Your call.`,
+`Twenty years in this business, and I still see folks treat a mortgage like a personality trait.
+A '69 Mustang with a solid frame will outlast a brand-new luxury sedan full of electrical gremlins. Old and solid beats new and fragile — every time.
+Same with your money. Boring fundamentals will quietly outlast flashy speculation dressed up as "strategy."
+I'm telling you this because I wish someone had told me at 25.
+Build smart. Build solid. And never trust a guy in a rented suit selling shortcuts.`,
 ];
 
-// Mike-Baxter-style sarcasm dial: 0..3, applied probabilistically.
-const SARCASM_MAX_LEVEL = 2;
-const SARCASM_PROBABILITY = 0.25;
+// Sarcasm is core to this brand — keep it frequent but always followed by substance.
+const SARCASM_MAX_LEVEL = 3;
+const SARCASM_PROBABILITY = 0.5; // ~half of posts carry a sarcastic edge
 
 // Soft self-promotion rotation.
 const PROMO_EVERY_N_POSTS = 6;
 const PROMO_BRANDS = [
-  "Macal Empire (my brand / business ventures)",
+  "Macal Empire (real estate, secondary market, and capital protection)",
   "Empire English Community (my community for learning English with confidence)",
 ];
 
-// Phase 2 — fixed visual identity appended to every image prompt (your black + gold theme).
+// Phase 2 — fixed visual identity appended to every image prompt (matte black + gold empire).
 const BRAND_IMAGE_STYLE =
-  "Premium minimalist editorial illustration, deep matte black background, elegant gold (#D4AF37) " +
-  "accents, refined royal/empire aesthetic, high contrast, lots of negative space, no text, no words, " +
-  "no logos, cinematic lighting, 4k, sophisticated and modern.";
+  "Premium, grounded, masculine editorial illustration. Deep matte black background with rich " +
+  "gold (#D4AF37) accents, empire/royal aesthetic crossed with rugged classic Americana (classic " +
+  "cars, workshop tools, the outdoors). High contrast, cinematic lighting, lots of negative space, " +
+  "no text, no words, no logos, sophisticated, timeless, 4k.";
 const AUTO_IMAGE = true; // auto-generate an image with each delivered draft (if AI binding present)
 
 // Phase 3 — small footer handle printed on carousel slides.
-const BRAND_HANDLE = "Macal Empire";
+const BRAND_HANDLE = "MACAL Empire — Common Sense First";
 
 // ============================================================
 //  3) CONTENT MATRIX
@@ -124,21 +141,21 @@ const HOW_MANY_RECENT_TO_AVOID = 4;
 //  4) EVERGREEN FALLBACK BANK — never an empty day
 // ============================================================
 const EVERGREEN = [
-  { pillar:"entrepreneurship", hook:"Everyone wants the highlight reel. Nobody wants the reps.",
-    body:"The highlight reel is 30 seconds.\nThe reps are 3 years.\n\nThe people you admire aren't more talented.\nThey just kept showing up on the days it felt pointless.\n\nConsistency isn't sexy. It's just undefeated.",
-    hashtags:["#Entrepreneurship", "#Discipline", "#Mindset"],
-    image:"a single climber on a vast mountain at dawn, persistence and ambition",
+  { pillar:"entrepreneurship", hook:"Everyone wants the trophy. Nobody wants the cold mornings in the blind.",
+    body:"The trophy shot is 30 seconds.\nThe scouting, the waiting, the boring reps — that's 3 years.\n\nThe folks you admire aren't more talented. They just kept showing up on the days it felt pointless.\n\nConsistency isn't flashy. It's just undefeated.\n\nWe don't do hype. We do homework.",
+    hashtags:["#Entrepreneurship", "#Discipline", "#CommonSense"],
+    image:"a lone hunter waiting patiently in a misty blind at dawn",
     comments:["What's one boring rep you're committing to this month?"] },
-  { pillar:"investing", hook:"The best investment I ever made had a 0% return for 2 years.",
-    body:"It was a skill, not a stock.\n\nIt paid nothing while I learned it.\nThen it paid for everything after.\n\nStop optimizing for this quarter. Start compounding for this decade.",
-    hashtags:["#Investing", "#WealthBuilding", "#MoneyMindset"],
-    image:"a small seed growing into a golden tree, long-term compounding",
+  { pillar:"investing", hook:"The best investment I ever made paid 0% for two years.",
+    body:"It wasn't a stock. It was a skill.\n\nIt paid nothing while I learned it. Then it paid for everything after.\n\nA '69 Mustang with a solid frame outlasts a flashy sedan full of electrical gremlins. Old and solid beats new and fragile.\n\nStop optimizing for this quarter. Start compounding for this decade.",
+    hashtags:["#Investing", "#WealthBuilding", "#CommonSense"],
+    image:"a restored classic car engine gleaming under workshop light",
     comments:["What skill are you compounding right now?"] },
-  { pillar:"AI", hook:"AI won't take your job. Someone using AI to do your job 10x faster will.",
-    body:"The gap isn't human vs. machine.\nIt's people who learned the new tools vs. people who didn't.\n\nSpend one hour a week learning. In a year you'll be unrecognizable.",
-    hashtags:["#AI", "#FutureOfWork", "#Automation"],
-    image:"a human hand and a robotic hand building something together, collaboration",
-    comments:["What's one AI tool that changed how you work?"] },
+  { pillar:"real estate", hook:"They keep building McMansions nobody can afford while families can't find a starter home.",
+    body:"It's like bringing a million-dollar race car to a demolition derby. Wrong tool, wrong arena, wrong result.\n\nA home isn't a gadget you finance for 30 years. It's shelter that holds its value.\n\nThe market doesn't care how smart your thermostat is. It cares whether you overpaid.\n\nBuild smart. Build solid.",
+    hashtags:["#RealEstate", "#PropertyInvesting", "#CommonSense"],
+    image:"a solid brick family home foundation at golden hour",
+    comments:["Buyers: what's the most overpriced 'feature' you've been pitched?"] },
 ];
 
 // ============================================================
@@ -278,8 +295,8 @@ function buildPrompt(topic, tweakInstruction) {
     : "Write the post in English.";
 
   const sarcasmLine = topic.sarcasm > 0
-    ? `Add a Mike-Baxter-style dry, sarcastic edge at intensity ${topic.sarcasm}/3 — witty and a little cheeky, never mean or unprofessional.`
-    : "Keep the tone sincere and direct (no sarcasm this time).";
+    ? `Sarcasm: ON at intensity ${topic.sarcasm}/3 (MACAL "scalpel, not sledgehammer"). RULES: punch up at systems/scams/hype, never at people struggling; ALWAYS follow a sarcastic line with real substance; keep it clean (no profanity); pass the "friendly wink" test.`
+    : "Sarcasm: OFF this time — sincere, direct, and protective.";
 
   const promoLine = topic.isPromo && topic.promoBrand
     ? `At the very end, weave in ONE soft, natural mention of "${topic.promoBrand}" with a light call-to-action. Do not make it salesy.`
@@ -303,7 +320,7 @@ function buildPrompt(topic, tweakInstruction) {
 MY VOICE:
 ${BRAND_VOICE}
 
-${examples ? "EXAMPLES OF MY REAL POSTS (match this rhythm, length, and tone):\n" + examples + "\n" : ""}
+${examples ? "EXAMPLES OF MY VOICE (match this rhythm, length, and tone):\n" + examples + "\n" : ""}
 TODAY'S BRIEF:
 - Pillar / topic area: ${topic.pillar}
 - Format: ${topic.format}
@@ -311,16 +328,22 @@ TODAY'S BRIEF:
 - ${sarcasmLine}
 - ${promoLine}${seedLine}
 
-RULES:
-- Write a scroll-stopping LinkedIn post that earns COMMENTS, not just likes.
-- The first line (hook) must make people stop and want to read more.
-- Short lines. Generous line breaks. One idea. No corporate fluff. No "In today's fast-paced world".
-- Do NOT use markdown, asterisks, or headers. Plain text only (LinkedIn style).
-- 80–200 words for the body.
-- End the body in a way that invites a reply or a comment.${tweakLine}
+STRUCTURE (MACAL "Common Sense First" architecture):
+1. HOOK (first line): call out a modern absurdity everyone sees but nobody names. Stop the scroll in 5 seconds.
+2. MEAT: make the point through ONE relatable analogy from this arsenal — hunting/outdoors, tools/workshop,
+   classic cars, sports, military, or family/home — backed by plain logic or evidence.
+3. CLOSE: a direct, punchy sign-off with authority (e.g. "We don't do hype. We do homework.").
+
+HARD RULES (the Forbidden List):
+- Short, punchy lines. Use fragments for emphasis. One idea per sentence. End paragraphs with a sharp "kicker".
+- No jargon without instant translation. No guaranteed returns. No attacks on individuals (punch up at systems).
+- No profanity. No fluff. No "In today's fast-paced world". No markdown/asterisks/headers — plain text only.
+- Every claim backed by logic or evidence. Always land a clear takeaway. Confidence WITH humility.
+- A 12-year-old should understand the main point. Protect the reader's interests first.
+- 80–200 words for the body. End in a way that invites a reply or comment.${tweakLine}
 
 Also provide:
-- "image_prompt": a short visual concept for an accompanying image (a scene/metaphor, NO text in the image).
+- "image_prompt": a short visual concept (a scene/metaphor from the analogy arsenal), NO text in the image.
 - "comments": 3 short, thoughtful first-comment ideas I could post myself to spark discussion.
 
 Return ONLY valid JSON (no code fences) with exactly this shape:

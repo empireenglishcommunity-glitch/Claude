@@ -109,14 +109,17 @@ Worker (same token string on both sides).
 
 ## 🔑 Make it sound like YOU (most important step)
 
-Open `worker.js` and edit the **BRAND VOICE** block near the top:
+The voice is **already encoded from your MACAL Empire Brand Bible** ("Common Sense First" —
+authoritative, sarcastic-but-never-cruel, paternal; hook → analogy → punchy close). The full
+reference lives in `brand/macal-brand-bible.md`. Open `worker.js` to fine-tune:
 
-- **`BRAND_VOICE`** — a few honest lines about how you write.
-- **`BEST_POSTS`** — paste **6–10 of your best real LinkedIn posts**. This is the #1 lever
-  for voice quality. The placeholders work, but your real posts make it sound like you.
-- **`SARCASM_MAX_LEVEL` / `SARCASM_PROBABILITY`** — your Mike-Baxter dial (default: medium, ~1 in 4 posts).
-- **`PROMO_EVERY_N_POSTS` / `PROMO_BRANDS`** — how often it softly mentions Macal Empire / Empire English Community (default: every 6th post).
-- **`BRAND_IMAGE_STYLE` / `BRAND_HANDLE`** — the look of generated images and the footer on carousels.
+- **`BRAND_VOICE`** — the persona summary (already set to the MACAL voice).
+- **`BEST_POSTS`** — currently holds 3 example posts written *in your voice* from the bible's
+  templates. Swap these for your **real top-performing posts** when you have them — that's the
+  single biggest quality lever.
+- **`SARCASM_MAX_LEVEL` / `SARCASM_PROBABILITY`** — your sarcasm dial (set high: ~half of posts).
+- **`PROMO_EVERY_N_POSTS` / `PROMO_BRANDS`** — soft mentions of Macal Empire / Empire English Community.
+- **`BRAND_IMAGE_STYLE` / `BRAND_HANDLE`** — matte black + gold empire look; carousel footer.
 - **`LANGUAGE`** — `"en"`, `"ar"`, or `"mix"`.
 - **`PILLARS` / `FORMATS` / `HASHTAG_BANK`** — your topics, post styles, and hashtags.
 
