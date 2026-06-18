@@ -117,102 +117,102 @@ This plan converts the approved `design.md` and `requirements.md` into an increm
     - createFunnelClaim → signUp → redeemFunnelClaim → profile bootstrapped with tier/region/Telegram id
     - _Requirements: 6.1, 6.2, 6.3_
 
-- [ ] 6. Checkpoint — Layer 0, auth, and funnel
+- [x] 6. Checkpoint — Layer 0, auth, and funnel
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 7. Implement private audio storage
-  - [ ] 7.1 Configure the private `recordings` bucket and storage path policy
+- [x] 7. Implement private audio storage
+  - [x] 7.1 Configure the private `recordings` bucket and storage path policy
     - Create the private Supabase Storage bucket and per-user path policy enforcing the `recordings/{userId}/` prefix
     - _Requirements: 7.4, 7.9_
 
-  - [ ] 7.2 Implement the `AudioApi` SDK
+  - [x] 7.2 Implement the `AudioApi` SDK
     - Implement `getUploadUrl` (signed upload URL expiring ≤ 300s, scoped to `recordings/{userId}/`), `registerRecording` (persist kind, reference text, duration seconds, byte size, accent-score-at-time only after successful upload), `getPlaybackUrl` (signed URL expiring ≤ 3600s), and `listArchive` (owning learner's recordings, optional kind filter)
     - Reject expired/path-mismatched upload URLs without storing data; on incomplete upload, persist no metadata and return an error
     - _Requirements: 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9_
 
-  - [ ]* 7.3 Write property test — audio path integrity
+  - [x]* 7.3 Write property test — audio path integrity
     - **Property 8: Audio path integrity** — for any recording, the signed upload URL and persisted `storage_path` are prefixed `recordings/{user_id}/` for the owning learner
     - **Validates: Requirements 7.2, 7.4**
 
-  - [ ]* 7.4 Write property test — recording metadata round-trip
+  - [x]* 7.4 Write property test — recording metadata round-trip
     - **Property 9: Recording metadata round-trip** — for any registered metadata, the archive returns equivalent metadata and only the owning learner's recordings matching any kind filter
     - **Validates: Requirements 7.5, 7.8**
 
-  - [ ]* 7.5 Write integration test — record → upload → register → playback (design §3.2 storage slice)
+  - [x]* 7.5 Write integration test — record → upload → register → playback (design §3.2 storage slice)
     - Cover signed-URL upload, metadata persistence, and playback URL issuance; assert failed-upload path persists no metadata
     - _Requirements: 7.3, 7.6, 7.7_
 
-- [ ] 8. Implement the AI Abstraction Layer (interfaces + router + cost guard + reference adapter contract)
-  - [ ] 8.1 Implement the provider registry and a reference adapter contract
+- [x] 8. Implement the AI Abstraction Layer (interfaces + router + cost guard + reference adapter contract)
+  - [x] 8.1 Implement the provider registry and a reference adapter contract
     - Implement `AiProviderRegistry` returning the configured Speech/Language adapters via config (no call-site change on swap)
     - Implement a single in-repo **reference/mock adapter** for each interface that returns normalized `PronunciationResult` / `CoachingFeedback` / `GenerationResult` shapes — this is the swappability contract only; do NOT wire real Azure/Speechace/OpenAI/Anthropic providers (deferred to P2)
     - Set the `provider` field server-side on every returned result
     - _Requirements: 8.4, 8.5_
 
-  - [ ] 8.2 Implement the `CostGuard`
+  - [x] 8.2 Implement the `CostGuard`
     - Implement `checkAllowance` (resolve op type speech/language, verify tier daily allowance before any provider call) and `recordUsage`; define the accounting window as a fixed 24h period from 00:00 UTC with per-learner reset at the boundary
     - Deny over-allowance requests with an allowance-exceeded error making no provider call and recording no usage; on provider failure, record no usage and preserve remaining allowance
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6_
 
-  - [ ] 8.3 Implement the `AiRouter` Edge Function (single AI entry point)
+  - [x] 8.3 Implement the `AiRouter` Edge Function (single AI entry point)
     - Implement `assessPronunciation`: cost-guard check → cache lookup → read audio → call Speech adapter → call Language adapter → write scores + error history to Layer 0 before returning → return `{ result, feedback, recordingId }`
     - Implement `generate`: cost-guard check → cache lookup (cache-served content is not billable) → Language adapter → usage recording
     - Return typed `AiUnavailable` on provider error/timeout or when no adapter is registered, keeping the originating job retryable and recording no partial scores
     - _Requirements: 8.1, 8.2, 8.3, 8.6, 8.7, 8.8, 9.7_
 
-  - [ ] 8.4 Implement the client `AiApi` SDK (routes only through the backend)
+  - [x] 8.4 Implement the client `AiApi` SDK (routes only through the backend)
     - Implement `assessPronunciation` and `generate` that call only the Edge Function router; ensure no provider SDK/endpoint and no API key is reachable from client code
     - _Requirements: 1.3, 1.4, 1.5, 8.1_
 
-  - [ ]* 8.5 Write property test — provider isolation
+  - [x]* 8.5 Write property test — provider isolation
     - **Property 2: Provider isolation** — for any AI request the app calls only `AiApi`; no provider SDK is reachable client-side and results always carry a server-set `provider` tag
     - **Validates: Requirements 1.3, 1.4, 8.1, 8.5**
 
-  - [ ]* 8.6 Write property test — swappability / normalized shape
+  - [x]* 8.6 Write property test — swappability / normalized shape
     - **Property 3: Swappability** — for any registered adapter pair, the router yields identically-shaped normalized results so call sites are unchanged
     - **Validates: Requirements 8.2, 8.3, 8.4**
 
-  - [ ]* 8.7 Write property test — cost ceiling
+  - [x]* 8.7 Write property test — cost ceiling
     - **Property 11: Cost ceiling** — for any sequence of a learner's AI requests within a day, billable ops never exceed the tier allowance and over-allowance requests are denied before any provider call
     - **Validates: Requirements 9.1, 9.2, 9.6**
 
-  - [ ]* 8.8 Write unit tests for CostGuard arithmetic and router error paths
+  - [x]* 8.8 Write unit tests for CostGuard arithmetic and router error paths
     - Cover per-tier allowance arithmetic, 00:00 UTC reset, cache-served non-billable path, provider-failure no-usage path, and `AiUnavailable` (provider error + no-adapter) retryable states
     - _Requirements: 9.3, 9.4, 9.5, 9.7, 8.7, 8.8_
 
-- [ ] 9. Checkpoint — storage and AI Abstraction Layer
+- [x] 9. Checkpoint — storage and AI Abstraction Layer
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 10. Implement cross-cutting foundations
-  - [ ] 10.1 Implement Arabic-first / RTL i18n
+- [x] 10. Implement cross-cutting foundations
+  - [x] 10.1 Implement Arabic-first / RTL i18n
     - Set up `i18next`/`react-i18next` with `ar` and `en` resource bundles; default new learners to `ar`; apply RTL via `I18nManager` using logical start/end so nothing clips or overflows
     - Persist `uiLocale` changes to the profile and apply direction within 1 second; retain prior locale and surface an error on persistence failure; fall back to `en` for missing strings; keep learning content English regardless of locale
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7_
 
-  - [ ] 10.2 Implement offline-resilient audio capture
+  - [x] 10.2 Implement offline-resilient audio capture
     - Implement `AudioCapture` (`startRecording`/`stopRecording`) producing compressed mono AAC/m4a at 24–64 kbps; persist every capture locally before any upload and confirm local persistence, surfacing an error (never silently dropping) on local-persist failure
     - _Requirements: 7.1, 10.1, 10.2_
 
-  - [ ] 10.3 Implement the offline Outbox and low-data mode
+  - [x] 10.3 Implement the offline Outbox and low-data mode
     - Implement `Outbox` (`enqueue`/`flush`/`pending`) with persisted "pending" state while offline; on reconnect, flush FIFO (upload + submit), update each job's outcome state, and reconcile the UI within 2 seconds
     - Guarantee every accepted recording is always in exactly one observable state (evaluated, pending, or failed-with-indication) and is never removed before success or explicit dismissal; retry mid-transfer upload failures up to 5 attempts with increasing back-off, then move to terminal failed with manual retry
     - Implement low-data mode: defer non-essential downloads, prefer cached content, restrict network to active uploads/submissions
     - _Requirements: 10.3, 10.4, 10.5, 10.6, 10.7_
 
-  - [ ]* 10.4 Write property test — offline durability
+  - [x]* 10.4 Write property test — offline durability
     - **Property 10: Offline durability** — for any recording accepted by `AudioCapture`, it is either successfully evaluated or remains in the Outbox (never silently lost), including after a mid-upload failure
     - **Validates: Requirements 8.7, 10.5, 10.7**
 
-  - [ ]* 10.5 Write unit tests for i18n fallback and capture encoding
+  - [x]* 10.5 Write unit tests for i18n fallback and capture encoding
     - Cover missing-string `en` fallback, locale-persist-failure rollback, and AAC/m4a bitrate bounds (24–64 kbps)
     - _Requirements: 2.4, 2.6, 7.1_
 
-- [ ] 11. Final integration and wiring
-  - [ ] 11.1 Wire the Foundation Client SDK into the app shell
+- [x] 11. Final integration and wiring
+  - [x] 11.1 Wire the Foundation Client SDK into the app shell
     - Compose `AuthApi`, `ProfileApi`, `AudioApi`, `AiApi`, `AudioCapture`, and `Outbox` into a single typed SDK surface; route all app data/auth/storage/AI access exclusively through it (no direct external calls); connect the deep-link claim entry path
     - _Requirements: 1.3, 1.4, 4.1_
 
-  - [ ]* 11.2 Write end-to-end integration tests for the foundation pipelines
+  - [x]* 11.2 Write end-to-end integration tests for the foundation pipelines
     - Funnel claim → signUp → redeem → bootstrap (§3.1); record → upload → assess (via reference adapter) → profile write → playback (§3.2); offline enqueue → reconnect flush → reconcile (§3.3)
     - _Requirements: 5.3, 6.3, 7.5, 8.6, 10.4_
 

@@ -214,6 +214,37 @@ describe('recordCoreDay (Req 4.1, 4.6)', () => {
   });
 });
 
+describe('updateLocale (Req 2.3, 4.6)', () => {
+  it('persists a locale switch and advances updated_at', async () => {
+    const { store, api } = setup(() => T1);
+    await api.bootstrap(USER, { displayName: 'A', region: 'egypt', createdAt: T0 });
+    await store.updateProfile(USER, { updated_at: T0 });
+
+    const updated = await api.updateLocale(USER, 'en');
+    expect(updated.uiLocale).toBe('en');
+
+    const row = (await store.findProfile(USER)) as ProfileRow;
+    expect(row.ui_locale).toBe('en');
+    expect(row.updated_at).toBe(T1); // write-touch rule applied
+  });
+
+  it('is a no-op (and leaves updated_at unchanged) when the locale is unchanged', async () => {
+    const { store, api } = setup(() => T1);
+    await api.bootstrap(USER, { displayName: 'A', region: 'egypt', createdAt: T0 });
+    await store.updateProfile(USER, { updated_at: T0 }); // ui_locale defaults to 'ar'
+
+    const same = await api.updateLocale(USER, 'ar');
+    expect(same.uiLocale).toBe('ar');
+    const row = (await store.findProfile(USER)) as ProfileRow;
+    expect(row.updated_at).toBe(T0); // unchanged
+  });
+
+  it('throws when the profile does not exist', async () => {
+    const { api } = setup();
+    await expect(api.updateLocale(USER, 'en')).rejects.toBeInstanceOf(ProfileNotFoundError);
+  });
+});
+
 describe('duplicate / second-row-creation rejection (Req 3.9)', () => {
   it('the persistence guard rejects a second profile row for the same user', async () => {
     const store = new InMemoryProfileStore();

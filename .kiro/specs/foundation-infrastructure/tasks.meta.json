@@ -23,6 +23,30 @@
     "5.3 Write property test — claim safety": {
       "status": "passed",
       "lastRunTimestamp": 1781739403405
+    },
+    "7.3 Write property test — audio path integrity": {
+      "status": "passed",
+      "lastRunTimestamp": 1781740145755
+    },
+    "7.4 Write property test — recording metadata round-trip": {
+      "status": "passed",
+      "lastRunTimestamp": 1781740148437
+    },
+    "8.5 Write property test — provider isolation": {
+      "status": "passed",
+      "lastRunTimestamp": 1781741005698
+    },
+    "8.6 Write property test — swappability / normalized shape": {
+      "status": "passed",
+      "lastRunTimestamp": 1781741006712
+    },
+    "8.7 Write property test — cost ceiling": {
+      "status": "passed",
+      "lastRunTimestamp": 1781741006873
+    },
+    "10.4 Write property test — offline durability": {
+      "status": "passed",
+      "lastRunTimestamp": 1781742157649
     }
   },
   "executionHistory": {
@@ -193,6 +217,11 @@
         "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
         "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
         "timestamp": 1781736300126
+      },
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781739688111
       }
     ],
     "7.1 Configure the private `recordings` bucket and storage path policy": [
@@ -200,6 +229,11 @@
         "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
         "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
         "timestamp": 1781736300128
+      },
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781740211086
       }
     ],
     "7.2 Implement the `AudioApi` SDK": [
@@ -207,6 +241,11 @@
         "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
         "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
         "timestamp": 1781736300131
+      },
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781740212087
       }
     ],
     "8.1 Implement the provider registry and a reference adapter contract": [
@@ -214,6 +253,11 @@
         "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
         "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
         "timestamp": 1781736300133
+      },
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781741069189
       }
     ],
     "8.2 Implement the `CostGuard`": [
@@ -221,6 +265,11 @@
         "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
         "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
         "timestamp": 1781736300136
+      },
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781741069379
       }
     ],
     "8.3 Implement the `AiRouter` Edge Function (single AI entry point)": [
@@ -228,6 +277,11 @@
         "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
         "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
         "timestamp": 1781736300138
+      },
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781741069946
       }
     ],
     "8.4 Implement the client `AiApi` SDK (routes only through the backend)": [
@@ -235,6 +289,11 @@
         "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
         "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
         "timestamp": 1781736300141
+      },
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781741070959
       }
     ],
     "9. Checkpoint — storage and AI Abstraction Layer": [
@@ -242,6 +301,11 @@
         "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
         "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
         "timestamp": 1781736300144
+      },
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781741090249
       }
     ],
     "10.1 Implement Arabic-first / RTL i18n": [
@@ -249,6 +313,11 @@
         "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
         "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
         "timestamp": 1781736300146
+      },
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781742251360
       }
     ],
     "10.2 Implement offline-resilient audio capture": [
@@ -256,6 +325,11 @@
         "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
         "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
         "timestamp": 1781736300148
+      },
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781742251940
       }
     ],
     "10.3 Implement the offline Outbox and low-data mode": [
@@ -263,6 +337,11 @@
         "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
         "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
         "timestamp": 1781736300150
+      },
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781742253121
       }
     ],
     "11.1 Wire the Foundation Client SDK into the app shell": [
@@ -270,6 +349,11 @@
         "executionId": "2ec688fa-6709-4592-ac1d-9f11cd136b70",
         "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
         "timestamp": 1781736300153
+      },
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781742965808
       }
     ],
     "12. Final checkpoint — full foundation": [
@@ -375,6 +459,104 @@
         "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
         "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
         "timestamp": 1781739532718
+      }
+    ],
+    "7. Implement private audio storage": [
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781740212091
+      }
+    ],
+    "7.3 Write property test — audio path integrity": [
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781740214059
+      }
+    ],
+    "7.4 Write property test — recording metadata round-trip": [
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781740215053
+      }
+    ],
+    "7.5 Write integration test — record → upload → register → playback (design §3.2 storage slice)": [
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781740215320
+      }
+    ],
+    "8. Implement the AI Abstraction Layer (interfaces + router + cost guard + reference adapter contract)": [
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781741070962
+      }
+    ],
+    "8.5 Write property test — provider isolation": [
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781741071947
+      }
+    ],
+    "8.6 Write property test — swappability / normalized shape": [
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781741072910
+      }
+    ],
+    "8.7 Write property test — cost ceiling": [
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781741073923
+      }
+    ],
+    "8.8 Write unit tests for CostGuard arithmetic and router error paths": [
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781741074771
+      }
+    ],
+    "10. Implement cross-cutting foundations": [
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781742253125
+      }
+    ],
+    "10.4 Write property test — offline durability": [
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781742254916
+      }
+    ],
+    "10.5 Write unit tests for i18n fallback and capture encoding": [
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781742255029
+      }
+    ],
+    "11. Final integration and wiring": [
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781742965811
+      }
+    ],
+    "11.2 Write end-to-end integration tests for the foundation pipelines": [
+      {
+        "executionId": "9e3393b3-f657-4e55-98ca-00532c3ce059",
+        "chatSessionId": "50df9fbe-a418-4d94-ada3-92274803272e",
+        "timestamp": 1781742966011
       }
     ]
   }

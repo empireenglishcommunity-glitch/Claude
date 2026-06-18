@@ -420,6 +420,29 @@ export class ProfileApi {
     return errorRowToDomain(inserted);
   }
 
+  /**
+   * Persist the learner's interface locale (`uiLocale`) to Layer 0 (Req 2.3).
+   *
+   * This is the write path the i18n {@link LocalePersistPort} wiring needs: the
+   * production locale persister (see `src/foundation/sdk.ts`) resolves the
+   * authenticated user and calls this to durably record a locale switch. It
+   * applies the `updated_at` write-touch rule (Req 4.6) — a real change advances
+   * `updated_at`; a no-op (same locale) leaves the row untouched — and returns
+   * the freshly-assembled profile.
+   */
+  async updateLocale(userId: UUID, locale: UiLocale): Promise<LearnerProfile> {
+    const row = await this.requireRow(userId);
+    if (row.ui_locale === locale) {
+      return this.assemble(userId, row);
+    }
+    const updatedAt = resolveUpdatedAt(row.updated_at, true, this.now());
+    const updated = await this.store.updateProfile(userId, {
+      ui_locale: locale,
+      updated_at: updatedAt,
+    });
+    return this.assemble(userId, updated);
+  }
+
   /** Record a core-practice day and return the new streak state (Req 4.1). */
   async recordCoreDay(userId: UUID, at: ISODateTime): Promise<StreakState> {
     const row = await this.requireRow(userId);
