@@ -9,7 +9,12 @@ Features:
   - !today                 -> show today's challenge on demand
   - !recap <week>          -> AI weekly summary (mods)
   - !cert                  -> generate your PDF certificate
+  - !status                -> bot & challenge status (mods)
+  - !setday <n>            -> set current day number (mods)
+  - !announce <msg>        -> send announcement (mods)
+  - !reset                 -> wipe all data (admin, with confirmation)
 """
+import os
 import datetime
 import discord
 from discord.ext import commands, tasks
@@ -185,7 +190,144 @@ async def guide(ctx):
         "`!me` — تقدّمك ورتبتك\n"
         "`!top` — لوحة المتصدّرين\n"
         "`!cert` — شهادتك (PDF)\n"
-        "`!recap <الأسبوع>` — ملخّص أسبوعي (للمشرفين)"
+        "`!recap <الأسبوع>` — ملخّص أسبوعي (للمشرفين)\n\n"
+        "**أوامر المشرفين:**\n"
+        "`!status` — حالة البوت والتحدّي\n"
+        "`!setday <رقم>` — تعيين يوم التحدّي يدويًا\n"
+        "`!announce <رسالة>` — إعلان لجميع الأعضاء\n"
+        "`!reset` — إعادة تعيين بيانات التحدّي (خطير!)"
+    )
+
+
+# ═══════════════════════════════════════════════════════════════
+#  ADMIN / MOD COMMANDS
+# ═══════════════════════════════════════════════════════════════
+
+@bot.command(name="status")
+@commands.has_permissions(manage_guild=True)
+async def status(ctx):
+    """Show bot and challenge status summary."""
+    import platform
+    day = challenges.current_day() or 0
+    total_participants = len(database.all_participants())
+    total_logged = sum(d for _, d in database.leaderboard(1000))
+    start = config.START_DATE or "(غير محدّد)"
+
+    status_text = (
+        "📊 **حالة البوت والتحدّي**\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"🤖 البوت: متصل ✅\n"
+        f"🐍 Python: {platform.python_version()}\n"
+        f"📅 تاريخ البداية: `{start}`\n"
+        f"📌 اليوم الحالي: **{day}** / {config.TOTAL_DAYS}\n"
+        f"👥 المشاركون: **{total_participants}**\n"
+        f"✅ إجمالي التحديات المنجزة: **{total_logged}**\n"
+        f"⏰ وقت النشر اليومي: الساعة **{config.DAILY_POST_HOUR}:00** ({config.TIMEZONE})\n"
+        f"🧠 AI (Groq): {'✅ مفعّل' if config.GROQ_API_KEY else '❌ غير مفعّل (رسائل مدمجة)'}\n"
+        f"📡 القناة: <#{config.CHALLENGE_CHANNEL_ID}>"
+    )
+    await ctx.send(status_text)
+
+
+@bot.command(name="setday")
+@commands.has_permissions(manage_guild=True)
+async def setday(ctx, new_start_offset: int = None):
+    """Override the current challenge day by adjusting START_DATE.
+
+    Usage: !setday 5  — sets today as Day 5 of the challenge.
+    This recalculates START_DATE so that today = the given day number.
+    """
+    if new_start_offset is None or new_start_offset < 1 or new_start_offset > 30:
+        await ctx.send("❌ استخدام: `!setday <رقم من 1 إلى 30>` — يجعل اليوم هو ذلك الرقم.")
+        return
+
+    from datetime import timedelta
+    today = datetime.date.today()
+    new_start = today - timedelta(days=new_start_offset - 1)
+    config.START_DATE = new_start.isoformat()
+
+    # Also update .env file if possible (best effort)
+    env_path = os.path.join(config.BASE_DIR, ".env")
+    try:
+        if os.path.exists(env_path):
+            with open(env_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            with open(env_path, "w", encoding="utf-8") as f:
+                found = False
+                for line in lines:
+                    if line.strip().startswith("START_DATE"):
+                        f.write(f"START_DATE={config.START_DATE}\n")
+                        found = True
+                    else:
+                        f.write(line)
+                if not found:
+                    f.write(f"\nSTART_DATE={config.START_DATE}\n")
+    except Exception:
+        pass  # non-critical
+
+    await ctx.send(
+        f"✅ تم! اليوم أصبح **اليوم {new_start_offset}** من التحدّي.\n"
+        f"📅 تاريخ البداية الجديد: `{config.START_DATE}`"
+    )
+
+
+@bot.command(name="announce")
+@commands.has_permissions(manage_guild=True)
+async def announce(ctx, *, message: str = ""):
+    """Send an announcement to the challenge channel."""
+    if not message:
+        await ctx.send("❌ استخدام: `!announce <الرسالة>`")
+        return
+
+    channel = bot.get_channel(config.CHALLENGE_CHANNEL_ID)
+    if channel is None:
+        await ctx.send("❌ لم يتم العثور على قناة التحدّي. تحقق من CHALLENGE_CHANNEL_ID.")
+        return
+
+    announcement = f"📢 **إعلان من المشرفين:**\n\n{message}"
+    await channel.send(f"@everyone {announcement}")
+    await ctx.send(f"✅ تم إرسال الإعلان إلى <#{config.CHALLENGE_CHANNEL_ID}>")
+
+
+@bot.command(name="reset")
+@commands.has_permissions(administrator=True)
+async def reset(ctx):
+    """Reset all challenge data. Requires ADMINISTRATOR permission.
+
+    This is destructive — it deletes all participant progress.
+    Requires confirmation by reacting within 30 seconds.
+    """
+    confirm_msg = await ctx.send(
+        "⚠️ **تحذير: هل أنت متأكد أنك تريد حذف جميع بيانات التحدّي؟**\n"
+        "سيتم حذف جميع المشاركين وتقدّمهم. لا يمكن التراجع!\n\n"
+        "تفاعل بـ ✅ خلال 30 ثانية للتأكيد، أو تجاهل للإلغاء."
+    )
+    await confirm_msg.add_reaction("✅")
+
+    def check(reaction, user):
+        return (
+            user == ctx.author
+            and str(reaction.emoji) == "✅"
+            and reaction.message.id == confirm_msg.id
+        )
+
+    try:
+        await bot.wait_for("reaction_add", timeout=30.0, check=check)
+    except Exception:
+        await ctx.send("❌ تم إلغاء إعادة التعيين (انتهى الوقت).")
+        return
+
+    # Perform the reset
+    import sqlite3
+    conn = sqlite3.connect(config.DB_PATH)
+    conn.execute("DELETE FROM progress")
+    conn.execute("DELETE FROM participants")
+    conn.commit()
+    conn.close()
+
+    await ctx.send(
+        "🗑️ **تم إعادة تعيين جميع البيانات.**\n"
+        "جميع المشاركين وتقدّمهم تم حذفه. يمكن بدء تحدٍّ جديد الآن."
     )
 
 

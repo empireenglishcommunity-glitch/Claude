@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  challenge-bot:
+    build: .
+    container_name: empire-challenge-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      # Persist the SQLite database outside the container
+      - bot-data:/app
+    environment:
+      - TZ=${TIMEZONE:-Asia/Dubai}
+    # No ports needed — the bot connects outbound to Discord
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  bot-data:
+    driver: local
