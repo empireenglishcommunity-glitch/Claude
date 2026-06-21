@@ -8,7 +8,7 @@
 ## 🤖 1) Telegram Sales Bot  — ⭐ MAIN / LIVE
 - [x] **`telegram-assistant/worker.js`** — the live bot (Cloudflare Worker, **v13**)
 - [x] `telegram-assistant/SETUP.md` — setup steps (bot, KV, cron, webhook)
-- [x] ~~`telegram-assistant/Code.gs`~~ — old Apps Script version (deprecated, ignore)
+- [x] ~~`telegram-assistant/Code.gs`~~ — removed (deprecated, replaced by worker.js)
 
 **What it does:** guided button menus (packages, compare, help-me-choose, FAQ, subscribe) ·
 auto-replies to typed questions (keyword bank, no AI = free + reliable) ·
@@ -52,7 +52,7 @@ feedback · admin commands `/version /kv /list /stats`.
 ---
 
 ## 🛡️ 7) Server Infrastructure Hardening — ✅ DEPLOYED (June 21, 2026)
-- [x] **`SERVER_REFERENCE.md`** — complete server reference (v2.0, hardened)
+- [x] **`docs/SERVER_REFERENCE.md`** — complete server reference (v2.0, hardened)
 - [x] **`docs/SERVER_AUDIT.md`** — full security audit report
 - [x] **`docs/EMERGENCY-RECOVERY.md`** — standalone emergency recovery guide
 - [x] **`server-hardening/`** — complete implementation package (deployed)

@@ -1,33 +1,59 @@
-# dependencies
+# ============================================================
+#  Empire English Community — Monorepo .gitignore
+# ============================================================
+
+# ── Dependencies ──
 node_modules/
 
-# Expo
+# ── Mobile App (Expo / React Native) ──
 .expo/
 dist/
 web-build/
 expo-env.d.ts
-
-# Native
 *.orig.*
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
-
-# Metro
 .metro-health-check*
 
-# debug
+# ── Python (Challenge Bot) ──
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+*.db
+output/*.pdf
+
+# ── Cloudflare Workers ──
+.dev.vars
+.wrangler/
+
+# ── Environment & Secrets ──
+.env
+.env.*
+!.env.example
+!.dev.vars.example
+
+# ── Debug & Logs ──
 npm-debug.*
 yarn-debug.*
 yarn-error.*
-
-# macOS
-.DS_Store
-
-# env
-.env*.local
-
-# logs
 *.log
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Binary assets (use markdown versions instead) ──
+*.docx

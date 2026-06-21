@@ -28,7 +28,7 @@ a launch playbook, and a **Telegram sales bot** (the main ongoing work).
 - `EEC-International-Pricing-and-Feasibility.md` — Gulf/worldwide pricing + feasibility.
 - `telegram-assistant/worker.js` — ⭐ the Telegram bot (Cloudflare Worker).
 - `telegram-assistant/SETUP.md` — bot setup steps.
-- `telegram-assistant/Code.gs` — OLD Apps Script version (deprecated, ignore).
+- ~~`telegram-assistant/Code.gs`~~ — removed (deprecated Apps Script version, was unreliable).
 
 ---
 

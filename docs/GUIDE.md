@@ -66,7 +66,7 @@ Claude/
 └── telegram-assistant/
     ├── worker.js                         ← ⭐ THE BOT (Cloudflare Worker) — the live one
     ├── SETUP.md                          ← Step-by-step setup (bot, KV, cron, webhook)
-    └── Code.gs                           ← OLD version (Google Apps Script) — not used anymore
+    └── Code.gs                           ← REMOVED (deprecated, was never reliable)
 ```
 
 **The only file that runs the bot is `telegram-assistant/worker.js`.**
