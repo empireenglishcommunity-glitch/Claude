@@ -1,0 +1,52 @@
+# ============================================================
+#  Empire English — n8n Docker Compose (Hardened)
+#  Location on server: /opt/n8n/docker-compose.yml
+#
+#  Changes from original:
+#    - Pinned image version (no more :latest)
+#    - Memory limit: 2560M (leaves 1.5GB for OS/Docker/tunnel)
+#    - CPU limit: 1.5 cores (leaves 0.5 for system)
+#    - Log rotation: max 10MB x 5 files = 50MB cap
+#    - Docker HEALTHCHECK: restarts zombie containers
+#    - pids_limit: fork-bomb protection
+# ============================================================
+
+services:
+  n8n:
+    image: n8nio/n8n:1.97.1
+    container_name: empire-n8n
+    restart: always
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    environment:
+      - N8N_HOST=bot.empireenglish.online
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://bot.empireenglish.online/
+      - N8N_SECURE_COOKIE=false
+      - GENERIC_TIMEZONE=Asia/Dubai
+      - TZ=Asia/Dubai
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2560M
+        reservations:
+          memory: 512M
+    pids_limit: 200
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  n8n_data:
