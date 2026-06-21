@@ -10,6 +10,8 @@ venv/
 # Local data & generated files
 *.db
 output/*.pdf
+backups/
+data_persist/
 
 # OS
 .DS_Store

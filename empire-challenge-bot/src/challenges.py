@@ -23,14 +23,23 @@ def get_challenge(day: int):
 def current_day(today: date = None) -> int:
     """Work out which challenge day it is based on START_DATE.
 
-    If START_DATE is not set, returns 1 (first run = day 1).
+    Priority: database setting > environment variable > default (day 1).
     Returns a value clamped between 1 and TOTAL_DAYS, or 0 if finished.
     """
-    if not config.START_DATE:
+    # Try database first (persists across Docker restarts), then env var
+    try:
+        from . import database
+        start_str = database.get_setting("START_DATE", "")
+    except Exception:
+        start_str = ""
+    if not start_str:
+        start_str = config.START_DATE
+
+    if not start_str:
         return 1
     today = today or date.today()
     try:
-        start = datetime.strptime(config.START_DATE, "%Y-%m-%d").date()
+        start = datetime.strptime(start_str, "%Y-%m-%d").date()
     except ValueError:
         return 1
     delta = (today - start).days + 1
