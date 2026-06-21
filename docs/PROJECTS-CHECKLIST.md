@@ -51,6 +51,42 @@ feedback · admin commands `/version /kv /list /stats`.
 
 ---
 
+## 🛡️ 7) Server Infrastructure Hardening — ✅ DEPLOYED (June 21, 2026)
+- [x] **`SERVER_REFERENCE.md`** — complete server reference (v2.0, hardened)
+- [x] **`docs/SERVER_AUDIT.md`** — full security audit report
+- [x] **`docs/EMERGENCY-RECOVERY.md`** — standalone emergency recovery guide
+- [x] **`server-hardening/`** — complete implementation package (deployed)
+
+**Server:** Hetzner CX23 (`empire-n8n`), Helsinki, Ubuntu 26.04 LTS, 4GB RAM, 2 vCPU
+
+**What was implemented:**
+- [x] 2GB swap file (OOM crash protection, swappiness=10)
+- [x] Port 5678 closed to public (n8n bound to localhost only)
+- [x] SSH hardened (password auth disabled, key-only, MaxAuthTries=3, 5min timeout)
+- [x] Fail2Ban installed (SSH jail: 3 failures → 24h ban via UFW)
+- [x] UFW SSH rate-limiting (6 connections/30s per IP)
+- [x] n8n Docker image pinned to v2.26.8
+- [x] Container resource limits (2.5GB RAM, 1.5 CPU, 200 PIDs)
+- [x] Docker healthcheck (auto-restart zombie containers)
+- [x] Docker log rotation (10MB × 5 files)
+- [x] Telegram monitoring watchdog (60s checks, auto-recovery, deduplication)
+- [x] Automated daily backup (3AM, 14-day rotation)
+- [x] External uptime monitoring (BetterStack, 3min checks, email alerts)
+- [x] Kernel updated (7.0.0-22-generic) + verified full reboot recovery
+
+**Monitoring bots:**
+- `@macal_guardian_bot` → alerts `@macal_emperor` via Telegram (internal, 60s)
+- BetterStack → email alerts (external, 3min, covers total server failure)
+
+**Infrastructure Score: 3.7/10 → 9.0/10**
+
+**What YOU need to do (ongoing):**
+- [ ] Periodically check n8n releases and update version in `/opt/n8n/docker-compose.yml`
+- [ ] Consider enabling Hetzner backup add-on (~€1.22/mo) for full disk-level protection
+- [ ] Review Fail2Ban banned IPs occasionally (`fail2ban-client status sshd`)
+
+---
+
 ## 🔜 Possible next steps (not done yet)
 - [ ] Add real success stories/testimonials (landing page + bot)
 - [ ] og-image (social share image) + analytics pixels (Meta/TikTok)
@@ -94,6 +130,21 @@ admin commands (status, setday, announce, reset) · cron backup. 100% free, zero
 - [ ] Set `START_DATE` when challenge begins
 - [ ] Design 30 posters in Canva from `data/poster-text.md` (creative work)
 - [ ] Record 7 teaser videos from `data/launch-week-promo.md` (creative work)
+
+---
+
+---
+
+## 📝 8) LinkedIn Content Engine — ✅ BUILT (Phases 1–5)
+- [x] **`linkedin-engine/worker.js`** — Cloudflare Worker (text + image + carousel + Telegram cockpit)
+- [x] `linkedin-engine/SETUP.md` — full setup guide (dashboard + CLI)
+- [x] `linkedin-engine/carousel.gs` — Google Apps Script for PDF carousel generation
+- [x] `linkedin-engine/brand/macal-brand-bible.md` — MACAL voice reference
+- [x] `linkedin-engine/_test.mjs` — smoke test (mocks Telegram + Gemini + AI)
+- [x] `linkedin-engine/wrangler.toml` — Cloudflare Workers config
+- [x] `.github/workflows/linkedin-engine-smoke-test.yml` — CI (syntax + wrangler dry-run)
+
+**What it does:** Generates daily brand-voice LinkedIn posts (hook + body + hashtags + image + carousel) via Gemini AI → delivers to Telegram with inline buttons (Approve / Regenerate / Other hook / Tweak / New image / Carousel / Skip). Self-tuning topic rotation. Zero cost.
 
 ---
 
