@@ -5,41 +5,61 @@
 
 ---
 
-## Quick Start
+## ✅ DEPLOYMENT STATUS: COMPLETE
+
+**Deployed:** June 21, 2026
+**Server:** `empire-n8n` (77.42.43.250)
+**Result:** Infrastructure score 3.7/10 → 9.0/10
+
+All scripts in this package have been executed successfully on the production server. This directory is now an **archive of what was deployed** — useful for reference, re-deployment on a new server, or if the server needs to be rebuilt from scratch.
+
+---
+
+## Re-Deployment (New Server / Rebuild)
+
+If rebuilding the server from scratch, upload this directory and run:
 
 ```bash
 # 1. Upload this directory to the server
-scp -r server-hardening/ root@77.42.43.250:/root/
+scp -r server-hardening/ root@NEW_SERVER_IP:/root/
 
 # 2. SSH into the server
-ssh root@77.42.43.250
+ssh root@NEW_SERVER_IP
 
 # 3. Run everything
 cd /root/server-hardening
 sudo bash deploy.sh
 ```
 
-That's it. The script runs all 7 steps in order, is idempotent (safe to re-run), and pauses after SSH changes so you can verify you're not locked out.
+The script runs all 7 steps in order, is idempotent (safe to re-run), and pauses after SSH changes so you can verify you're not locked out.
+
+> **Note:** The `configs/docker-compose.yml` in this directory uses `n8nio/n8n:2.26.8`. Update the version tag to the latest stable before re-deploying on a new server.
 
 ---
 
 ## What Gets Deployed
 
-| Step | Script | What It Does | Priority |
-|:----:|--------|--------------|:--------:|
-| 1 | `01-swap-setup.sh` | Creates 2GB swap file, sets swappiness=10 | 🔴 Critical |
-| 2 | `02-firewall-hardening.sh` | Closes port 5678, rate-limits SSH, enables IPv6 | 🔴 Critical |
-| 3 | `03-ssh-hardening.sh` | Disables password auth, enforces key-only, sets timeouts | 🔴 Critical |
-| 4 | `04-fail2ban-setup.sh` | Installs fail2ban, 24h SSH ban after 3 failures | 🟠 High |
-| 5 | `05-docker-hardening.sh` | Pins n8n version, sets memory/CPU limits, healthcheck, log rotation | 🟠 High |
-| 6 | `06-monitoring-setup.sh` | Deploys Telegram alerting watchdog (systemd timer, every 60s) | 🔴 Critical |
-| 7 | `07-backup-setup.sh` | Daily n8n data backup with 14-day rotation | 🟠 High |
+| Step | Script | What It Does | Priority | Status |
+|:----:|--------|--------------|:--------:|:------:|
+| 1 | `01-swap-setup.sh` | Creates 2GB swap file, sets swappiness=10 | 🔴 Critical | ✅ Deployed |
+| 2 | `02-firewall-hardening.sh` | Closes port 5678, rate-limits SSH, enables IPv6 | 🔴 Critical | ✅ Deployed |
+| 3 | `03-ssh-hardening.sh` | Disables password auth, enforces key-only, sets timeouts | 🔴 Critical | ✅ Deployed |
+| 4 | `04-fail2ban-setup.sh` | Installs fail2ban, 24h SSH ban after 3 failures | 🟠 High | ✅ Deployed |
+| 5 | `05-docker-hardening.sh` | Pins n8n version, sets memory/CPU limits, healthcheck, log rotation | 🟠 High | ✅ Deployed |
+| 6 | `06-monitoring-setup.sh` | Deploys Telegram alerting watchdog (systemd timer, every 60s) | 🔴 Critical | ✅ Deployed |
+| 7 | `07-backup-setup.sh` | Daily n8n data backup with 14-day rotation | 🟠 High | ✅ Deployed |
+
+> **Additional manual steps performed during deployment (not in scripts):**
+> - n8n port binding changed to `127.0.0.1:5678:5678` (Docker bypasses UFW — this is the real fix)
+> - n8n image pinned to actual running version `2.26.8` (scripts had `1.97.1` placeholder)
+> - Kernel updated from `7.0.0-15` to `7.0.0-22` via reboot
+> - BetterStack external uptime monitor configured (email alerts, 3-min checks)
 
 ---
 
-## Running Individual Steps
+## Running Individual Steps (Re-deployment only)
 
-If you only want to run one step:
+If rebuilding and you only want to run one step:
 
 ```bash
 sudo bash deploy.sh --only 1   # Just swap
@@ -79,9 +99,9 @@ server-hardening/
 
 ---
 
-## After Deployment: Configure Monitoring
+## After Re-Deployment: Configure Monitoring
 
-The monitoring system is deployed but needs your Telegram credentials:
+When deploying on a new server, the monitoring system needs your Telegram credentials:
 
 ```bash
 nano /opt/monitor/watchdog.sh
