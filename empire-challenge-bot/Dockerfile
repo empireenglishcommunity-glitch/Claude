@@ -20,15 +20,15 @@ COPY . .
 # Ensure fonts directory is included (for Arabic PDF certificates)
 COPY fonts/ /app/fonts/
 
-# Create output directory for certificates
-RUN mkdir -p /app/output
+# Create persistent directories
+RUN mkdir -p /app/output /app/data_persist
 
-# Data volume for persistent SQLite database
-VOLUME ["/app/data_persist"]
+# Volumes for persistent data (SQLite DB + certificates)
+VOLUME ["/app/data_persist", "/app/output"]
 
-# Health indicator — the bot logs to stdout
+# Health indicator — verify the database is accessible
 HEALTHCHECK --interval=60s --timeout=10s --retries=3 \
-  CMD python -c "import sqlite3; sqlite3.connect('/app/challenge.db').execute('SELECT 1')" || exit 1
+  CMD python -c "import sqlite3; sqlite3.connect('/app/data_persist/challenge.db').execute('SELECT 1')" || exit 1
 
 # Run the bot
 CMD ["python", "run.py"]

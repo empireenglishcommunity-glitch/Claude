@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   challenge-bot:
     build: .
@@ -8,8 +6,9 @@ services:
     env_file:
       - .env
     volumes:
-      # Persist the SQLite database outside the container
-      - bot-data:/app
+      # Persist only the database and generated certificates
+      - bot-db:/app/data_persist
+      - bot-output:/app/output
     environment:
       - TZ=${TIMEZONE:-Asia/Dubai}
     # No ports needed — the bot connects outbound to Discord
@@ -20,5 +19,7 @@ services:
         max-file: "3"
 
 volumes:
-  bot-data:
+  bot-db:
+    driver: local
+  bot-output:
     driver: local

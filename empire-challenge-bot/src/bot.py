@@ -16,10 +16,19 @@ Features:
 """
 import os
 import datetime
+import logging
 import discord
 from discord.ext import commands, tasks
 
-from . import config, challenges, database, ai_coach, certificate
+from . import config, challenges, database, ai_coach, certificate, notify
+
+# ── Logging setup ──────────────────────────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("empire-challenge-bot")
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -54,9 +63,43 @@ async def _assign_rank_role(member: discord.Member, rank_name: str):
 @bot.event
 async def on_ready():
     database.init_db()
-    print(f"✅ Logged in as {bot.user} | serving {len(bot.guilds)} server(s)")
+    logger.info(f"Bot online: {bot.user} | v{config.BOT_VERSION} | {len(bot.guilds)} server(s)")
+    notify.bot_online()
     if not daily_post.is_running():
         daily_post.start()
+
+
+@bot.event
+async def on_disconnect():
+    logger.warning("Bot disconnected from Discord.")
+
+
+@bot.event
+async def on_resumed():
+    logger.info("Bot reconnected to Discord (session resumed).")
+
+
+@bot.event
+async def on_command_error(ctx, error):
+    """Global error handler — gives users friendly Arabic feedback."""
+    if isinstance(error, commands.CommandNotFound):
+        return  # Silently ignore unknown commands (e.g. !hello)
+
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("🔒 ليس لديك صلاحية لاستخدام هذا الأمر.")
+        return
+
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send(f"❌ ينقصك مدخل: `{error.param.name}`. اكتب `!guide` لمعرفة الاستخدام الصحيح.")
+        return
+
+    if isinstance(error, commands.BadArgument):
+        await ctx.send("❌ مدخل غير صحيح. تأكد من كتابة أرقام حيث مطلوب. اكتب `!guide` للمساعدة.")
+        return
+
+    # Unexpected errors — log and notify user
+    logger.error(f"Unhandled command error in !{ctx.command}: {error}")
+    await ctx.send("⚠️ حدث خطأ غير متوقع. حاول مرة أخرى أو أخبر المشرفين.")
 
 
 @tasks.loop(time=datetime.time(hour=config.DAILY_POST_HOUR, tzinfo=_zone()))
@@ -69,7 +112,7 @@ async def daily_post():
         return
     channel = bot.get_channel(config.CHALLENGE_CHANNEL_ID)
     if channel is None:
-        print("⚠️ CHALLENGE_CHANNEL_ID not found. Check your .env.")
+        logger.error("CHALLENGE_CHANNEL_ID not found. Check your .env.")
         return
     intro = ai_coach.daily_intro(day, c["task"])
     await channel.send(f"@everyone {intro}\n\n{challenges.format_challenge(c)}")
@@ -199,6 +242,16 @@ async def guide(ctx):
     )
 
 
+@bot.command(name="version")
+async def version(ctx):
+    """Show bot version and uptime info."""
+    import platform
+    await ctx.send(
+        f"🤖 **Empire Challenge Bot** v{config.BOT_VERSION}\n"
+        f"🐍 Python {platform.python_version()} | discord.py {discord.__version__}"
+    )
+
+
 # ═══════════════════════════════════════════════════════════════
 #  ADMIN / MOD COMMANDS
 # ═══════════════════════════════════════════════════════════════
@@ -216,7 +269,7 @@ async def status(ctx):
     status_text = (
         "📊 **حالة البوت والتحدّي**\n"
         f"━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🤖 البوت: متصل ✅\n"
+        f"🤖 البوت: متصل ✅ (v{config.BOT_VERSION})\n"
         f"🐍 Python: {platform.python_version()}\n"
         f"📅 تاريخ البداية: `{start}`\n"
         f"📌 اليوم الحالي: **{day}** / {config.TOTAL_DAYS}\n"
@@ -236,6 +289,7 @@ async def setday(ctx, new_start_offset: int = None):
 
     Usage: !setday 5  — sets today as Day 5 of the challenge.
     This recalculates START_DATE so that today = the given day number.
+    Persisted in the database (survives container restarts).
     """
     if new_start_offset is None or new_start_offset < 1 or new_start_offset > 30:
         await ctx.send("❌ استخدام: `!setday <رقم من 1 إلى 30>` — يجعل اليوم هو ذلك الرقم.")
@@ -244,30 +298,18 @@ async def setday(ctx, new_start_offset: int = None):
     from datetime import timedelta
     today = datetime.date.today()
     new_start = today - timedelta(days=new_start_offset - 1)
-    config.START_DATE = new_start.isoformat()
+    new_start_str = new_start.isoformat()
 
-    # Also update .env file if possible (best effort)
-    env_path = os.path.join(config.BASE_DIR, ".env")
-    try:
-        if os.path.exists(env_path):
-            with open(env_path, "r", encoding="utf-8") as f:
-                lines = f.readlines()
-            with open(env_path, "w", encoding="utf-8") as f:
-                found = False
-                for line in lines:
-                    if line.strip().startswith("START_DATE"):
-                        f.write(f"START_DATE={config.START_DATE}\n")
-                        found = True
-                    else:
-                        f.write(line)
-                if not found:
-                    f.write(f"\nSTART_DATE={config.START_DATE}\n")
-    except Exception:
-        pass  # non-critical
+    # Persist in database (survives Docker restarts)
+    database.set_setting("START_DATE", new_start_str)
+
+    # Also update in-memory config for immediate effect
+    config.START_DATE = new_start_str
 
     await ctx.send(
         f"✅ تم! اليوم أصبح **اليوم {new_start_offset}** من التحدّي.\n"
-        f"📅 تاريخ البداية الجديد: `{config.START_DATE}`"
+        f"📅 تاريخ البداية الجديد: `{new_start_str}`\n"
+        f"💾 محفوظ في قاعدة البيانات (يبقى بعد إعادة التشغيل)."
     )
 
 
@@ -334,4 +376,15 @@ async def reset(ctx):
 def run():
     if not config.DISCORD_TOKEN:
         raise SystemExit("❌ DISCORD_TOKEN غير موجود. انسخ .env.example إلى .env واملأه.")
-    bot.run(config.DISCORD_TOKEN)
+    logger.info(f"Starting Empire Challenge Bot v{config.BOT_VERSION}...")
+    try:
+        bot.run(config.DISCORD_TOKEN, log_handler=None)
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by operator (KeyboardInterrupt).")
+        notify.bot_offline("manual stop")
+    except Exception as e:
+        logger.error(f"Bot crashed: {e}")
+        notify.bot_offline(f"crash: {e}")
+        raise
+    finally:
+        logger.info("Bot process exiting.")
