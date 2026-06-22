@@ -5,6 +5,25 @@
 
 ---
 
+## 0. Session Management Protocol
+
+### `/sync` Command
+When the user sends `/sync`, execute the full repository closing protocol:
+1. **Session Review** — identify all changes made during the session
+2. **Code Verification** — confirm modified code compiles, tests pass, no secrets/debug left
+3. **Documentation Sync** — update PROJECTS-CHECKLIST.md, PROJECT-CONTEXT.md, README.md, and any CHANGELOG.md as needed
+4. **Repository Cleanup** — remove orphaned files, check .gitignore, verify no untracked files
+5. **Commit & Push** — stage all changes, write descriptive commit message, push to main
+6. **Final Report** — deliver summary with files changed, test results, doc updates, next steps
+
+### `/status` Command
+When the user sends `/status`, provide current repository state without making changes.
+
+### `/sync dry` Command
+Run the protocol analysis and show what would be done, without actually committing or pushing.
+
+---
+
 ## 1. Project Identity
 
 - **Project:** Empire English Community (EEC)
