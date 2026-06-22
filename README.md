@@ -12,7 +12,7 @@ This is a **monorepo** containing all technical systems for Empire English Commu
 | Component | Directory | Status | Description |
 |-----------|-----------|:------:|-------------|
 | **Telegram Sales Bot** | `telegram-assistant/` | Live | Keyword answer bank + button menus + payment approval gate (Cloudflare Worker) |
-| **LinkedIn Content Engine** | `linkedin-engine/` | Built | AI-powered daily LinkedIn post generator with Telegram cockpit (Cloudflare Worker) |
+| **LinkedIn Content Engine** | `linkedin-engine/` | Deployed | AI-powered daily LinkedIn post generator with Telegram cockpit (Cloudflare Worker) |
 | **30-Day Challenge Bot** | `empire-challenge-bot/` | Deployed | Discord bot for community challenges + AI coaching + PDF certificates (Python/Docker) |
 | **Mobile App** | `app/` + `src/` | Phase 1 complete | Pronunciation dictionary with syllables, IPA, Arabic meanings (React Native / Expo) |
 | **Landing Pages** | `web/` | Built | English + Arabic (RTL) landing pages with pricing, countdown, FAQ |
@@ -43,7 +43,7 @@ Full infrastructure details: [`docs/SERVER_REFERENCE.md`](docs/SERVER_REFERENCE.
 | **Cloudflare Tunnel** | Hetzner VPS (systemd) | `cloudflared.service` | ✅ |
 | **Challenge Bot** | Hetzner VPS `/opt/empire-challenge/` | `empire-challenge-bot` (Docker) | ✅ |
 | **Telegram Sales Bot** | Cloudflare Workers | `worker.js` (serverless) | ✅ |
-| **LinkedIn Engine** | Not yet deployed | — | — |
+| **LinkedIn Engine** | Cloudflare Workers | `linkedin-engine.macalempire.workers.dev` (serverless) | ✅ |
 | **Monitoring Watchdog** | Hetzner VPS (systemd timer) | 60s interval | ✅ |
 | **Backup** | Hetzner VPS (cron) | Daily 3 AM | ✅ |
 

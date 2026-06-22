@@ -145,7 +145,7 @@ admin commands (status, setday, announce, reset) · cron backup. 100% free, zero
 
 ---
 
-## 📝 8) LinkedIn Content Engine — ✅ BUILT (Not Yet Deployed)
+## 📝 8) LinkedIn Content Engine — ✅ DEPLOYED (June 22, 2026)
 - [x] **`linkedin-engine/worker.js`** — Cloudflare Worker (text + image + carousel + Telegram cockpit)
 - [x] `linkedin-engine/SETUP.md` — full setup guide (dashboard + CLI)
 - [x] `linkedin-engine/carousel.gs` — Google Apps Script for PDF carousel generation
@@ -157,14 +157,21 @@ admin commands (status, setday, announce, reset) · cron backup. 100% free, zero
 **What it does:** Generates daily brand-voice LinkedIn posts (hook + body + hashtags + image + carousel) via Gemini AI → delivers to Telegram with inline buttons (Approve / Regenerate / Other hook / Tweak / New image / Carousel / Skip). Self-tuning topic rotation. Zero cost.
 
 **What YOU still need to do (to deploy):**
-- [ ] Create Cloudflare Worker (`linkedin-engine`) and paste `worker.js`
-- [ ] Create KV namespace and bind as `KV`
-- [ ] Add secrets: `TELEGRAM_TOKEN`, `ADMIN_CHAT_ID`, `GEMINI_API_KEY`
-- [ ] (Optional) Bind Workers AI as `AI` for image generation
-- [ ] Set Telegram webhook to worker URL
-- [ ] Add Cron trigger (`0 5 * * *` = 7 AM Cairo / 9 AM Dubai)
-- [ ] Test with `/new` command in Telegram
+- [x] Create Cloudflare Worker (`linkedin-engine`) and paste `worker.js` ✅
+- [x] Create KV namespace and bind as `KV` ✅
+- [x] Add secrets: `TELEGRAM_TOKEN`, `ADMIN_CHAT_ID`, `GEMINI_API_KEY` ✅
+- [x] (Optional) Bind Workers AI as `AI` for image generation ✅
+- [x] Set Telegram webhook to worker URL ✅
+- [x] Add Cron trigger (`0 5 * * *` = 7 AM Cairo / 9 AM Dubai) ✅
+- [x] Test with `/new` command in Telegram ✅
 - [ ] Replace `BEST_POSTS` with your real top-performing posts (quality lever)
+- [ ] Rotate Telegram token + Gemini key (exposed in chat — do ASAP)
+
+**Deployment details:**
+- Worker: `linkedin-engine.macalempire.workers.dev`
+- KV: `linkedin-kv`
+- Cron: `0 5 * * *` (daily 9 AM Dubai)
+- Telegram cockpit: connected and responding
 
 ---
 
@@ -195,10 +202,11 @@ admin commands (status, setday, announce, reset) · cron backup. 100% free, zero
 - [ ] Share Discord invite link on TikTok
 
 ### 🟡 Short-term (July 2026)
-- [ ] Deploy LinkedIn Content Engine to Cloudflare
 - [ ] Host landing pages (Cloudflare Pages or GitHub Pages)
 - [ ] Add real testimonials (landing page + Telegram bot)
 - [ ] Add OG image + analytics pixels to landing pages
+- [ ] Replace `BEST_POSTS` in LinkedIn Engine with real top posts
+- [ ] Rotate LinkedIn Engine credentials (Telegram token + Gemini key)
 
 ### 🟢 Medium-term (when ready)
 - [ ] Make repository private (no impact on any service)

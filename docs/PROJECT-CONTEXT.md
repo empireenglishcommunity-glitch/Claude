@@ -32,7 +32,7 @@
 |---|--------|----------|--------|----------|
 | 1 | **Telegram Sales Bot** | Cloudflare Worker | ✅ LIVE (v13) | `telegram-assistant/worker.js` |
 | 2 | **30-Day Challenge Bot** | Docker on Hetzner | ✅ DEPLOYED (v1.0.0) | `empire-challenge-bot/src/bot.py` |
-| 3 | **LinkedIn Content Engine** | Cloudflare Worker | Built (not deployed) | `linkedin-engine/worker.js` |
+| 3 | **LinkedIn Content Engine** | Cloudflare Worker | ✅ DEPLOYED (June 22, 2026) | `linkedin-engine/worker.js` |
 | 4 | **Landing Pages** | Not hosted | Built | `web/index.html`, `web/index-ar.html` |
 | 5 | **Mobile App** | Not published | Phase 1 done | `app/` + `src/` |
 | 6 | **Server Hardening** | Hetzner VPS | ✅ DEPLOYED | `server-hardening/` |
