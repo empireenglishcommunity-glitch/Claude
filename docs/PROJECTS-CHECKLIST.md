@@ -96,7 +96,7 @@ feedback · admin commands `/version /kv /list /stats`.
 
 ---
 
-## 🎯 6) 30-Day Challenge Bot (Discord) — READY TO DEPLOY
+## 🎯 6) 30-Day Challenge Bot (Discord) — ✅ DEPLOYED (June 22, 2026)
 - [x] **`empire-challenge-bot/`** — complete Discord bot + content package
 - [x] `src/bot.py` — main bot: 12 commands (join, done, today, me, top, cert, recap, guide, status, setday, announce, reset)
 - [x] `src/database.py` — SQLite storage (participants + progress)
@@ -123,10 +123,18 @@ auto-assigns Discord rank roles (4 tiers) · PDF certificates · leaderboard · 
 admin commands (status, setday, announce, reset) · cron backup. 100% free, zero vendor lock-in.
 
 **What YOU still need to do (human-only steps):**
-- [ ] Create Discord bot at discord.com/developers (5 min)
-- [ ] Create Discord server per blueprint in `docs/تحدي-30-يوم-المنطقة-غير-المريحة.md` (20 min)
-- [ ] Fill `.env` with your credentials (2 min)
-- [ ] Deploy (`docker compose up -d`) on VPS or free host (5 min)
+- [x] Create Discord bot at discord.com/developers ✅
+- [x] Create Discord server with full channel/role structure ✅ (automated via `scripts/setup_server.py`)
+- [x] Fill `.env` with credentials ✅
+- [x] Deploy (`docker compose up -d`) on Hetzner VPS ✅
+- [x] Credentials rotated after initial exposure ✅
+- [x] Daily backup cron configured (3 AM) ✅
+
+**Deployment details:**
+- Server: Hetzner CX23 (`empire-n8n`), `/opt/empire-challenge/empire-challenge-bot/`
+- Container: `empire-challenge-bot` (Docker, restart: unless-stopped)
+- Start date: July 1, 2026 (daily post at 6 AM Asia/Dubai)
+- Discord server: Empire English — تحدّي 30 يوم (ID: 1518615304035373106)
 - [ ] Set `START_DATE` when challenge begins
 - [ ] Design 30 posters in Canva from `data/poster-text.md` (creative work)
 - [ ] Record 7 teaser videos from `data/launch-week-promo.md` (creative work)
