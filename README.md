@@ -13,7 +13,7 @@ This is a **monorepo** containing all technical systems for Empire English Commu
 |-----------|-----------|:------:|-------------|
 | **Telegram Sales Bot** | `telegram-assistant/` | Live | Keyword answer bank + button menus + payment approval gate (Cloudflare Worker) |
 | **LinkedIn Content Engine** | `linkedin-engine/` | Built | AI-powered daily LinkedIn post generator with Telegram cockpit (Cloudflare Worker) |
-| **30-Day Challenge Bot** | `empire-challenge-bot/` | Ready to deploy | Discord bot for community challenges + AI coaching + PDF certificates (Python) |
+| **30-Day Challenge Bot** | `empire-challenge-bot/` | Deployed | Discord bot for community challenges + AI coaching + PDF certificates (Python/Docker) |
 | **Mobile App** | `app/` + `src/` | Phase 1 complete | Pronunciation dictionary with syllables, IPA, Arabic meanings (React Native / Expo) |
 | **Landing Pages** | `web/` | Built | English + Arabic (RTL) landing pages with pricing, countdown, FAQ |
 | **Server Hardening** | `server-hardening/` | Deployed | Security, monitoring, and resilience scripts for the production Hetzner server |
@@ -32,6 +32,20 @@ This is a **monorepo** containing all technical systems for Empire English Commu
 | **Backups** | Daily 3AM, 14-day rotation | Automated |
 
 Full infrastructure details: [`docs/SERVER_REFERENCE.md`](docs/SERVER_REFERENCE.md)
+
+---
+
+## Deployment Status (as of June 22, 2026)
+
+| System | Where | Container/Process | Auto-Starts |
+|--------|-------|-------------------|:-----------:|
+| **n8n** (workflow automation) | Hetzner VPS `/opt/n8n/` | `empire-n8n` (Docker) | ✅ |
+| **Cloudflare Tunnel** | Hetzner VPS (systemd) | `cloudflared.service` | ✅ |
+| **Challenge Bot** | Hetzner VPS `/opt/empire-challenge/` | `empire-challenge-bot` (Docker) | ✅ |
+| **Telegram Sales Bot** | Cloudflare Workers | `worker.js` (serverless) | ✅ |
+| **LinkedIn Engine** | Not yet deployed | — | — |
+| **Monitoring Watchdog** | Hetzner VPS (systemd timer) | 60s interval | ✅ |
+| **Backup** | Hetzner VPS (cron) | Daily 3 AM | ✅ |
 
 ---
 
@@ -69,11 +83,14 @@ cd linkedin-engine
 # See: linkedin-engine/SETUP.md (Cloudflare Worker + Telegram cockpit)
 ```
 
-### 30-Day Challenge Bot
+### 30-Day Challenge Bot (deployed June 22, 2026)
 ```bash
-cd empire-challenge-bot
-cp .env.example .env    # Fill in your Discord token
-docker compose up -d    # See: empire-challenge-bot/DEPLOYMENT.md
+# Already deployed on Hetzner VPS at /opt/empire-challenge/empire-challenge-bot/
+# Container: empire-challenge-bot (Docker, restart: unless-stopped)
+# Discord server: Empire English — تحدّي 30 يوم (ID: 1518615304035373106)
+# Start date: July 1, 2026 at 6 AM Asia/Dubai
+# To update: ssh in → cd /opt/empire-challenge && git pull && cd empire-challenge-bot && docker compose up -d --build
+# See: empire-challenge-bot/DEPLOYMENT.md
 ```
 
 ### Mobile App (Expo)

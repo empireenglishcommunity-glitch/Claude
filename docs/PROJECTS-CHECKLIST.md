@@ -135,15 +135,17 @@ admin commands (status, setday, announce, reset) · cron backup. 100% free, zero
 - Container: `empire-challenge-bot` (Docker, restart: unless-stopped)
 - Start date: July 1, 2026 (daily post at 6 AM Asia/Dubai)
 - Discord server: Empire English — تحدّي 30 يوم (ID: 1518615304035373106)
-- [ ] Set `START_DATE` when challenge begins
+
+**Remaining (creative/human tasks before July 1):**
+- [x] Set `START_DATE=2026-07-01` in .env ✅
 - [ ] Design 30 posters in Canva from `data/poster-text.md` (creative work)
 - [ ] Record 7 teaser videos from `data/launch-week-promo.md` (creative work)
+- [ ] Run Day 0 live session using `data/launch-day-live-script.md`
+- [ ] Post welcome/rules content in `#اقرأ-أولًا` and `#القوانين`
 
 ---
 
----
-
-## 📝 8) LinkedIn Content Engine — ✅ BUILT (Phases 1–5)
+## 📝 8) LinkedIn Content Engine — ✅ BUILT (Not Yet Deployed)
 - [x] **`linkedin-engine/worker.js`** — Cloudflare Worker (text + image + carousel + Telegram cockpit)
 - [x] `linkedin-engine/SETUP.md` — full setup guide (dashboard + CLI)
 - [x] `linkedin-engine/carousel.gs` — Google Apps Script for PDF carousel generation
@@ -154,6 +156,57 @@ admin commands (status, setday, announce, reset) · cron backup. 100% free, zero
 
 **What it does:** Generates daily brand-voice LinkedIn posts (hook + body + hashtags + image + carousel) via Gemini AI → delivers to Telegram with inline buttons (Approve / Regenerate / Other hook / Tweak / New image / Carousel / Skip). Self-tuning topic rotation. Zero cost.
 
+**What YOU still need to do (to deploy):**
+- [ ] Create Cloudflare Worker (`linkedin-engine`) and paste `worker.js`
+- [ ] Create KV namespace and bind as `KV`
+- [ ] Add secrets: `TELEGRAM_TOKEN`, `ADMIN_CHAT_ID`, `GEMINI_API_KEY`
+- [ ] (Optional) Bind Workers AI as `AI` for image generation
+- [ ] Set Telegram webhook to worker URL
+- [ ] Add Cron trigger (`0 5 * * *` = 7 AM Cairo / 9 AM Dubai)
+- [ ] Test with `/new` command in Telegram
+- [ ] Replace `BEST_POSTS` with your real top-performing posts (quality lever)
+
 ---
 
 ℹ️ Note: the repo also contains a separate **mobile app** ("Phase 1 — The Core", React Native/Expo) merged via PR #4 from another effort — not part of the work in this conversation.
+
+---
+
+## 📱 9) Mobile App (Pronunciation Dictionary) — Phase 1 Complete (Parked)
+- [x] Expo/React Native app structure (Expo Router, TypeScript strict)
+- [x] 30 curated words with Arabic meanings, syllable breakdowns, IPA
+- [x] Speech service (slow/normal speed pronunciation)
+- [x] Dictionary service (offline-first + API fallback)
+- [x] 8 branded UI components (gold-on-black theme)
+- [x] 3 screens: Splash → Dictionary/Sentences tabs → Word detail
+
+**Status:** Development complete. Not published to app stores.
+**Next:** Publish to Apple App Store + Google Play when ready (requires developer accounts).
+
+---
+
+## 📋 Master Priority List (What's Left Across All Projects)
+
+### 🔴 Before July 1, 2026 (Challenge Launch)
+- [ ] Record 7 teaser videos (`empire-challenge-bot/data/launch-week-promo.md`)
+- [ ] Design 30 posters in Canva (`empire-challenge-bot/data/poster-text.md`)
+- [ ] Post welcome/rules in Discord `#اقرأ-أولًا` + `#القوانين`
+- [ ] Run Day 0 live session (June 30)
+- [ ] Share Discord invite link on TikTok
+
+### 🟡 Short-term (July 2026)
+- [ ] Deploy LinkedIn Content Engine to Cloudflare
+- [ ] Host landing pages (Cloudflare Pages or GitHub Pages)
+- [ ] Add real testimonials (landing page + Telegram bot)
+- [ ] Add OG image + analytics pixels to landing pages
+
+### 🟢 Medium-term (when ready)
+- [ ] Make repository private (no impact on any service)
+- [ ] Publish mobile app to stores
+- [ ] Custom domain for landing page
+- [ ] Fill crypto (USDT/Binance) details in Telegram bot
+- [ ] Enable Hetzner backup add-on (~€1.22/mo)
+
+---
+
+*Last updated: June 22, 2026*

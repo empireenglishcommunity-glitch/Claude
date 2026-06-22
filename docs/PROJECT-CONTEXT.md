@@ -1,96 +1,234 @@
-# 🧭 PROJECT CONTEXT — Empire English (paste this into any new conversation)
+# 🧭 PROJECT CONTEXT — Empire English Community
 
-> Purpose: hand off the ENTIRE project to a new chat (or another AI) so work continues
-> smoothly without re-explaining. Read this top to bottom; everything is here.
+> **Purpose:** Complete handoff document for any new AI agent, developer, or conversation.
+> Read this top to bottom — everything needed to continue work is here.
+>
+> **Last updated:** June 22, 2026
 
 ---
 
 ## 0) ONE-LINE SUMMARY
-"Empire English Community (EEC)" — an online English-learning community (sub-brand of MACALE EMPIRE)
-for Arabic speakers. We built: pricing strategy, feasibility studies, landing pages (EN+AR),
-a launch playbook, and a **Telegram sales bot** (the main ongoing work).
+
+**Empire English Community (EEC)** — a full-stack online English-learning community for Arabic speakers (sub-brand of MACAL Empire). We built and deployed: a Telegram sales bot, a Discord challenge bot, a LinkedIn content engine, landing pages, a mobile app, server infrastructure, and comprehensive marketing content.
 
 ---
 
 ## 1) WHERE EVERYTHING LIVES
-- **GitHub repo:** https://github.com/empireenglishcommunity-glitch/Claude
-- **Branch:** `launch-night-strategy`  ·  **Pull Request:** #1
-- The bot's live file: **`telegram-assistant/worker.js`**
+
+| Resource | Location |
+|----------|----------|
+| **GitHub repo** | https://github.com/empireenglishcommunity-glitch/Claude |
+| **Branch** | `main` (all work merged) |
+| **VPS** | Hetzner CX23, Helsinki, `77.42.43.250` (SSH key-only) |
+| **n8n** | `https://bot.empireenglish.online` (via Cloudflare Tunnel) |
+| **Domain** | `empireenglish.online` (Namecheap → Cloudflare NS) |
+| **Steering rules** | `.kiro/steering/project-rules.md` (auto-loaded by Kiro) |
 
 ---
 
-## 2) FILES IN THE REPO
-- `GUIDE.md` — master guide (backup, folder structure, how to enhance, deploy).
-- `PROJECT-CONTEXT.md` — this handoff file.
-- `index.html` / `index-ar.html` — landing pages (English / Arabic RTL), black+gold "empire" theme.
-- `EEC-Launch-Night-Playbook.md` — launch strategy, Telegram posts, package cards, image prompts.
-- `EEC-Feasibility-Study.md` — Egypt feasibility + how many members to cover a 3,000 AED salary.
-- `EEC-International-Pricing-and-Feasibility.md` — Gulf/worldwide pricing + feasibility.
-- `telegram-assistant/worker.js` — ⭐ the Telegram bot (Cloudflare Worker).
-- `telegram-assistant/SETUP.md` — bot setup steps.
-- ~~`telegram-assistant/Code.gs`~~ — removed (deprecated Apps Script version, was unreliable).
+## 2) ALL SYSTEMS — CURRENT STATE
+
+| # | System | Platform | Status | Key File |
+|---|--------|----------|--------|----------|
+| 1 | **Telegram Sales Bot** | Cloudflare Worker | ✅ LIVE (v13) | `telegram-assistant/worker.js` |
+| 2 | **30-Day Challenge Bot** | Docker on Hetzner | ✅ DEPLOYED (v1.0.0) | `empire-challenge-bot/src/bot.py` |
+| 3 | **LinkedIn Content Engine** | Cloudflare Worker | Built (not deployed) | `linkedin-engine/worker.js` |
+| 4 | **Landing Pages** | Not hosted | Built | `web/index.html`, `web/index-ar.html` |
+| 5 | **Mobile App** | Not published | Phase 1 done | `app/` + `src/` |
+| 6 | **Server Hardening** | Hetzner VPS | ✅ DEPLOYED | `server-hardening/` |
+| 7 | **n8n Workflows** | Docker on Hetzner | ✅ RUNNING | `/opt/n8n/` on server |
 
 ---
 
-## 3) THE TELEGRAM BOT (current state)
-- **Platform:** Cloudflare Worker (single file `worker.js`), returns clean HTTP 200. Free + always-on.
-- **Storage:** Cloudflare KV namespace bound as **`KV`** (stores `LEARNED` answers, `u:<id>` customer memory, `INVOICES`).
-- **No AI** (Gemini/Groq free tiers were unreliable → we use a keyword answer bank + button menus). This was a deliberate, final decision.
-- **Current version:** **v13** (check by sending the bot `/version`).
-- **Config at top of worker.js:** `TELEGRAM_TOKEN`, `ADMIN_CHAT_ID`, `PAY` object.
+## 3) TELEGRAM SALES BOT (System 1 — LIVE)
 
-### How it behaves
-- **First message from a customer →** welcome + main menu buttons.
-- **Buttons (instant):** الباقات / ساعدني أختار (quiz) / قارن الباقات (all 6 pairings) / طرق الدفع / أسئلة شائعة / عايز أشترك.
-- **Typed text →** matched against the `ANSWERS` keyword bank → auto-reply (general info) instantly.
-- **Payment / crypto / offers (money-sensitive) →** sent to ADMIN for approval FIRST (safety), then released to customer. Crypto (USDT/Binance) & bank transfer → escalated to admin to send personally.
-- **Unknown question →** shows customer the menu + escalates to admin with a "🧠 رد + تعليم" button. When admin replies, the answer is SAVED (auto-learn) for next time.
-- **Payment proof (photo) →** forwarded to admin + logged in INVOICES + "✅ تأكيد الاشتراك" button (marks subscribed, sends welcome, stops reminders).
-- **Daily reminder funnel (Cron `0 16 * * *`):** 5 messages over 5 days (success story → comparison → objections → limited offer → last chance), stops when they subscribe. Feedback request 2 days after subscribing.
-- **Admin commands:** `/version` `/kv` `/list` `/stats`.
+- **Platform:** Cloudflare Worker (single file), returns HTTP 200. Free + always-on.
+- **Storage:** Cloudflare KV (`KV`) — stores learned answers, customer memory, invoices.
+- **No AI** — keyword answer bank + button menus. Deliberate decision for 100% reliability.
+- **Version:** v13. Check: send `/version` to the bot.
 
-### Key code parts in worker.js
-- `ANSWERS` = keyword bank. `view()` = button menus. `PKG/CMP/REC/FAQ` = button texts. `REMINDERS` = funnel.
-- Logic flags per answer: `menu:"..."` (opens a menu), `sensitive:true` (payment approval), `personal:true` (crypto/bank → admin sends).
+### Behavior
+- First message → welcome + main menu buttons
+- Buttons: الباقات / ساعدني أختار (quiz) / قارن الباقات / طرق الدفع / أسئلة شائعة / عايز أشترك
+- Payment/crypto → admin approval FIRST, then customer sees response
+- Unknown question → menu + escalates to admin + "🧠 رد + تعليم" (auto-learn)
+- Payment proof photo → forwarded + logged + "✅ تأكيد الاشتراك" button
+- Daily reminder funnel (Cron `0 16 * * *`): 5 messages over 5 days, stops on subscribe
+- Admin commands: `/version` `/kv` `/list` `/stats`
+
+### To modify
+Edit `telegram-assistant/worker.js` → paste in Cloudflare dashboard → Deploy → `/version` to confirm.
 
 ---
 
-## 4) PRICING (confirmed)
-| Tier | 🇪🇬 Egypt /mo | 🌍 Worldwide /mo | Role |
-|------|--------------|------------------|------|
-| Recruit | 199 EGP | $19 | entry |
-| Builder ⭐ | 399 EGP | $39 | most popular (push this) |
-| Empire | 799 EGP | $89 | faster + personal |
-| VIP | 3,500 EGP | $249 | private 1-on-1 (limited) |
-- Founding price = locked forever. Annual ≈ 35% off. 7-day money-back guarantee. Cohort 1 starts Sat 27 June.
-- Regional pricing framed as "fair, like Netflix" (Egypt pays less, not more).
+## 4) 30-DAY CHALLENGE BOT (System 2 — DEPLOYED)
 
-## 5) PAYMENT METHODS (confirmed)
+- **Platform:** Python 3.12 + discord.py, Docker container on Hetzner VPS
+- **Location:** `/opt/empire-challenge/empire-challenge-bot/`
+- **Container:** `empire-challenge-bot` (restart: unless-stopped)
+- **Database:** SQLite (persisted in Docker volume `bot-db`)
+- **AI:** Groq free API (llama-3.3-70b) + built-in Arabic fallback
+- **Version:** v1.0.0. Check: `!version` in Discord.
+- **Discord Server:** Empire English — تحدّي 30 يوم (ID: 1518615304035373106)
+- **Start Date:** July 1, 2026 (auto-posts daily at 6 AM Asia/Dubai)
+
+### Commands (13 total)
+`!join` `!done` `!today` `!me` `!top` `!cert` `!recap` `!guide` `!version` `!status` `!setday` `!announce` `!reset`
+
+### Content Package (in `empire-challenge-bot/data/`)
+- 30 challenges JSON (bot reads automatically)
+- 7 pre-launch teaser video scripts
+- Day 0 live stream script (bilingual)
+- 30 TikTok captions (Arabic + English)
+- 30 poster text designs
+
+### To update
+```bash
+ssh -i ~/.ssh/id_ed25519 root@77.42.43.250
+cd /opt/empire-challenge && git pull
+cd empire-challenge-bot && docker compose down && docker compose up -d --build
+docker compose logs --tail=10  # verify "Bot online"
+```
+
+---
+
+## 5) LINKEDIN CONTENT ENGINE (System 3 — Built, Not Deployed)
+
+- **Platform:** Cloudflare Worker (single file `worker.js`)
+- **AI:** Gemini 2.5 Flash Lite → Groq (fallback) → Evergreen bank (never empty)
+- **Content:** 13 pillars × 9 formats, self-tuning rotation from approve/skip behavior
+- **Features:** Daily draft → Telegram with 7 buttons (Approve/Regenerate/Hook/Tweak/Image/Carousel/Skip)
+- **Setup guide:** `linkedin-engine/SETUP.md`
+
+### To deploy
+See `linkedin-engine/SETUP.md` — same pattern as Telegram bot (paste worker.js → set secrets → KV → webhook → cron).
+
+---
+
+## 6) SERVER INFRASTRUCTURE
+
+| Parameter | Value |
+|-----------|-------|
+| **Provider** | Hetzner Cloud (CX23, Helsinki) |
+| **IP** | `77.42.43.250` |
+| **OS** | Ubuntu 26.04 LTS |
+| **SSH** | Key-only (Ed25519). Key: `C:\Users\97150\.ssh\id_ed25519` |
+| **RAM** | 4 GB (n8n capped at 2.5 GB) |
+| **Monthly cost** | ~$7 |
+| **Security score** | 9.0/10 |
+
+### Running services (all auto-start on reboot)
+- Docker Engine + n8n container (`empire-n8n`)
+- Challenge Bot container (`empire-challenge-bot`)
+- Cloudflare Tunnel (`cloudflared.service`)
+- Fail2Ban (SSH jail, 24h ban)
+- Monitoring watchdog (systemd timer, 60s)
+- Backup (cron, daily 3 AM)
+
+### Key files on server
+```
+/opt/n8n/docker-compose.yml          ← n8n configuration
+/opt/empire-challenge/               ← Challenge bot repo clone
+/opt/monitor/watchdog.sh             ← Health monitoring script
+/opt/backups/backup-n8n.sh           ← n8n backup script
+/root/.cloudflared/config.yml        ← Tunnel routing
+/etc/fail2ban/jail.local             ← SSH jail config
+```
+
+### Full reference
+- Architecture: `docs/SERVER_REFERENCE.md`
+- Emergency recovery: `docs/EMERGENCY-RECOVERY.md`
+
+---
+
+## 7) PRICING (confirmed & active)
+
+| Tier | 🇪🇬 Egypt /mo | 🌍 Worldwide /mo |
+|------|--------------|------------------|
+| Recruit | 199 EGP | $19 |
+| Builder ⭐ | 399 EGP | $39 |
+| Empire | 799 EGP | $89 |
+| VIP 1-on-1 | 3,500 EGP | $249 |
+
+- Founding price locked forever. Annual ≈ 35% off.
+- 7-day money-back guarantee.
+- Regional pricing: "fair like Netflix" framing.
+
+### Payment Methods
 - 🇪🇬 Vodafone Cash: 01004581035 · InstaPay: 01004581035 / mohamedashry10041
 - 🌍 PayPal: paypal.me/bioroma
-- 🪙 USDT (Binance) & 🏦 bank transfer (large amounts / annual) → admin sends details personally.
-
-## 6) KEY DECISIONS / PREFERENCES
-- Bot copy must be **clean Arabic (Egyptian dialect)**, well-formatted, minimal English (only brand/package names + PayPal/USDT). Warm, motivating, sales-oriented, consistent emojis.
-- **Any money-related message must be approved by the admin before reaching the customer.**
-- Sell hard but honest: upsell/cross-sell, push Builder as the sweet spot.
-- Keep it free + reliable. After ANY code change: paste into Cloudflare → Deploy → confirm `/version`.
-
-## 7) WHAT'S DONE ✅ / POSSIBLE NEXT 🔜
-Done: pricing, feasibility (Egypt + intl), landing pages (EN/AR), launch playbook + posts + cards, bot v13 (menus, payment gate, learning, reminders, invoices, feedback).
-Possible next: real success stories/testimonials on the landing page + bot, og-image, analytics pixels, more bank topics, custom domain, weekly stats report.
+- 🪙 USDT (Binance) & 🏦 bank transfer → admin sends details personally
 
 ---
 
-## 8) ⭐ HANDOFF PROMPT (copy-paste this into the NEW conversation)
+## 8) KEY DECISIONS (do not reverse without discussion)
 
-"I'm continuing a project called **Empire English Community** (online English-learning community for Arabic speakers, sub-brand of MACALE EMPIRE). Everything is in my GitHub repo `empireenglishcommunity-glitch/Claude` (branch `launch-night-strategy`, PR #1), and a full context file is at `PROJECT-CONTEXT.md`.
-
-The main ongoing work is a **Telegram sales bot** built as a SINGLE Cloudflare Worker file `telegram-assistant/worker.js` — NO AI, it's a keyword answer bank + inline-button menus, with Cloudflare KV (bound as `KV`) for memory/auto-learning, a payment-approval gate (money stuff goes to admin first), a daily reminder funnel (Cron), invoice capture, subscribe-confirm, and admin commands (/version /kv /list /stats). Current version is v13.
-
-I'm pasting the current `worker.js` below. I want to [DESCRIBE WHAT YOU WANT]. Please keep it ONE self-contained worker.js, keep ALL existing features working, keep the Arabic copy clean and well-formatted, keep money-related messages behind admin approval, and return the FULL updated file so I can paste-and-deploy. Bump the version number too."
-
-(Then paste the full contents of `telegram-assistant/worker.js`.)
+| Decision | Rationale |
+|----------|-----------|
+| No AI in Telegram sales bot | Free tier AI was unreliable; keyword bank = 100% uptime |
+| SQLite for Challenge Bot | Zero-cost, zero-setup, perfect for <10K users |
+| n8n over Make.com/Zapier | No operation limits, self-hosted, no vendor lock-in |
+| Cloudflare Workers for bots | Always-on, free, no process management needed |
+| SSH key-only authentication | Security requirement — passwords permanently disabled |
+| Docker for all services | Isolation, reproducibility, resource limits, auto-restart |
+| Port 5678 localhost-only | Docker bypasses UFW — binding to 127.0.0.1 is real enforcement |
+| Human-in-the-loop for money | All payments require admin approval before customer sees |
 
 ---
-> With this file + the repo, any new chat or AI can continue exactly where we stopped. 👑
+
+## 9) BRAND & VOICE
+
+- **Community:** Empire English Community
+- **Parent:** MACAL Empire ("Common Sense First")
+- **Visual:** Gold (#D4AF37) on matte black (#0A0A0B)
+- **Voice (LinkedIn/MACAL):** Authoritative, sarcastic (scalpel not sledgehammer), paternal/protective
+- **Voice (Telegram/Discord):** Egyptian Arabic, warm, motivating, sales-oriented, consistent emojis
+- **Owner:** Mahmoud Ashri (@macal_emperor)
+- **TikTok:** @macal.empire
+
+---
+
+## 10) WHAT'S LEFT TO DO
+
+### Before July 1, 2026 (Challenge Launch)
+- [ ] Record 7 teaser videos (scripts in `empire-challenge-bot/data/launch-week-promo.md`)
+- [ ] Design 30 posters in Canva (text in `empire-challenge-bot/data/poster-text.md`)
+- [ ] Post welcome/rules in Discord #اقرأ-أولًا + #القوانين
+- [ ] Run Day 0 live session (June 30)
+- [ ] Share Discord invite on TikTok
+
+### Short-term
+- [ ] Deploy LinkedIn Engine to Cloudflare
+- [ ] Host landing pages
+- [ ] Add real testimonials
+- [ ] Make repository private
+
+### Full task list
+See `docs/PROJECTS-CHECKLIST.md` → "Master Priority List" section.
+
+---
+
+## 11) HANDOFF PROMPT (for new AI conversations)
+
+Copy-paste this into any new AI chat to continue work:
+
+---
+
+> I'm continuing a project called **Empire English Community** — a monorepo with multiple systems for an English-learning community for Arabic speakers. The repo is `empireenglishcommunity-glitch/Claude` on GitHub.
+>
+> **Currently deployed:**
+> - Telegram Sales Bot (Cloudflare Worker, v13, live)
+> - 30-Day Challenge Bot (Discord, Python/Docker on Hetzner VPS, v1.0.0, live — starts July 1)
+> - Server infrastructure (Hetzner CX23, hardened, monitored, backed up)
+>
+> **Built but not yet deployed:**
+> - LinkedIn Content Engine (Cloudflare Worker, ready)
+> - Landing pages (HTML, ready)
+>
+> **Key files:** `README.md` (project map), `docs/PROJECTS-CHECKLIST.md` (everything built), `.kiro/steering/project-rules.md` (AI rules), `docs/SERVER_REFERENCE.md` (infrastructure).
+>
+> I want to [DESCRIBE WHAT YOU WANT]. The repo has full documentation — read the steering file and checklist first.
+
+---
+
+> With this file + the repo + the steering rules, any AI or developer can continue exactly where we left off. 👑
