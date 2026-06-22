@@ -620,23 +620,31 @@ class ServerSetup(discord.Client):
                 else:
                     # Create new channel
                     if ch_cfg["type"] == "text":
-                        overwrites = ch_overwrites or {}
                         if ch_overwrites:
                             # Merge category + channel overwrites
                             merged = dict(cat_overwrites)
                             merged.update(ch_overwrites)
-                            overwrites = merged
-
-                        await category.create_text_channel(
-                            name=ch_name,
-                            topic=ch_cfg.get("topic", ""),
-                            overwrites=overwrites if ch_overwrites else None,
-                        )
+                            await category.create_text_channel(
+                                name=ch_name,
+                                topic=ch_cfg.get("topic", ""),
+                                overwrites=merged,
+                            )
+                        else:
+                            # No override — just create in category (inherits)
+                            await category.create_text_channel(
+                                name=ch_name,
+                                topic=ch_cfg.get("topic", ""),
+                            )
                     else:
-                        await category.create_voice_channel(
-                            name=ch_name,
-                            overwrites=ch_overwrites,
-                        )
+                        if ch_overwrites:
+                            await category.create_voice_channel(
+                                name=ch_name,
+                                overwrites=ch_overwrites,
+                            )
+                        else:
+                            await category.create_voice_channel(
+                                name=ch_name,
+                            )
                     print(f"    ✅ Created: #{ch_name}")
 
                 await asyncio.sleep(0.3)
