@@ -1,0 +1,21 @@
+module.exports = {
+  content: ['./app/**/*.{js,jsx}', './components/**/*.{js,jsx}'],
+  theme: {
+    extend: {
+      colors: {
+        'imperial-gold': '#D4AF37',
+        'sovereign-black': '#0A0A0F',
+        'midnight-navy': '#0D1117',
+        'parchment': '#F5F0E8',
+        'steel': '#8B919A',
+        'emerald': '#1B5E20',
+      },
+      fontFamily: {
+        'heading': ['Cinzel', 'serif'],
+        'body': ['Inter', 'sans-serif'],
+        'arabic': ['Cairo', 'sans-serif'],
+      },
+    },
+  },
+  plugins: [],
+}
