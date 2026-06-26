@@ -636,14 +636,17 @@ class ServerSetup(discord.Client):
                         await existing_ch.edit(overwrites=ch_overwrites)
                     print(f"    ✏️  #{ch_name}")
                 else:
-                    kwargs = {"name": ch_name}
-                    if ch_overwrites:
-                        kwargs["overwrites"] = ch_overwrites
                     if is_voice:
-                        await category.create_voice_channel(**kwargs)
+                        await category.create_voice_channel(
+                            name=ch_name,
+                            overwrites=ch_overwrites if ch_overwrites else None,
+                        )
                     else:
-                        kwargs["topic"] = ch_cfg.get("topic", "")
-                        await category.create_text_channel(**kwargs)
+                        await category.create_text_channel(
+                            name=ch_name,
+                            topic=ch_cfg.get("topic", ""),
+                            overwrites=ch_overwrites if ch_overwrites else None,
+                        )
                     print(f"    ✅ #{ch_name}")
                 await asyncio.sleep(0.3)
 
