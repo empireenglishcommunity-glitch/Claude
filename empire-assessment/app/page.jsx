@@ -220,19 +220,19 @@ function StepIndicator({ currentStep, completedModules }) {
   )
 }
 
-// ─── Sequential Trial List (locked/unlocked) ─────────────
+// ─── Trial List (all visible, guided progression) ────────
 
-function SequentialTrialList({ completedModules, onBegin }) {
-  const nextTrial = TRIAL_ORDER.find(key => !completedModules.includes(key))
-
+function TrialList({ completedModules, moduleScores, onBegin, allComplete }) {
   return (
     <div className="space-y-4 max-w-2xl mx-auto">
       {TRIAL_ORDER.map((key, index) => {
         const mod = MODULES[key]
         const Icon = mod.icon
         const isCompleted = completedModules.includes(key)
-        const isNext = key === nextTrial
-        const isLocked = !isCompleted && !isNext
+        const score = moduleScores[key]
+        // Suggest next uncompleted trial (guided but not forced)
+        const isRecommended = !isCompleted && !allComplete && 
+          TRIAL_ORDER.findIndex(k => !completedModules.includes(k)) === index
 
         return (
           <motion.div
@@ -242,23 +242,21 @@ function SequentialTrialList({ completedModules, onBegin }) {
             transition={{ delay: index * 0.1 }}
           >
             <MetallicCard
-              className={`p-5 ${isLocked ? 'opacity-50' : ''}`}
-              hover={isNext}
-              glowOnHover={isNext}
+              className={`p-5 ${isCompleted ? 'border-[rgba(74,222,128,0.15)]' : ''}`}
+              hover={!isCompleted && !allComplete}
+              glowOnHover={isRecommended}
             >
               <div className="flex items-center gap-4">
                 {/* Step number + icon */}
                 <div
                   className="w-12 h-12 rounded-full border-2 flex items-center justify-center shrink-0"
                   style={{
-                    borderColor: isCompleted ? '#4ade80' : isNext ? mod.color : '#8B919A30',
-                    backgroundColor: isCompleted ? 'rgba(74,222,128,0.1)' : isNext ? `${mod.color}10` : 'transparent',
+                    borderColor: isCompleted ? '#4ade80' : isRecommended ? mod.color : `${mod.color}60`,
+                    backgroundColor: isCompleted ? 'rgba(74,222,128,0.1)' : `${mod.color}08`,
                   }}
                 >
                   {isCompleted ? (
                     <CheckCircle className="w-5 h-5 text-[#4ade80]" />
-                  ) : isLocked ? (
-                    <Lock className="w-5 h-5 text-steel/50" />
                   ) : (
                     <Icon className="w-5 h-5" style={{ color: mod.color }} />
                   )}
@@ -267,30 +265,39 @@ function SequentialTrialList({ completedModules, onBegin }) {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-parchment font-bold text-sm">{mod.name}</h3>
+                    <h3 className={`font-bold text-sm ${isCompleted ? 'text-[#4ade80]' : 'text-parchment'}`}>{mod.name}</h3>
                     <span className="text-xs text-muted-gold font-arabic">{mod.name_ar}</span>
+                    {isRecommended && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[rgba(212,175,55,0.1)] border border-[rgba(212,175,55,0.3)] text-imperial-gold">
+                        Next
+                      </span>
+                    )}
                   </div>
                   <p className="text-steel text-xs mt-0.5">
                     {mod.questions} questions • {mod.duration}
                   </p>
+                  {/* Show score if completed */}
+                  {isCompleted && score !== undefined && (
+                    <p className="text-xs mt-1" style={{ color: score >= 60 ? '#4ade80' : score >= 35 ? '#D4AF37' : '#cd7f32' }}>
+                      Score: {score}%
+                    </p>
+                  )}
                 </div>
 
                 {/* Status / Action */}
                 <div className="shrink-0">
                   {isCompleted ? (
-                    <span className="text-xs text-[#4ade80] border border-[rgba(74,222,128,0.3)] bg-[rgba(74,222,128,0.1)] px-3 py-1 rounded-full">
-                      ✓ Complete
+                    <span className="text-xs text-[#4ade80] border border-[rgba(74,222,128,0.3)] bg-[rgba(74,222,128,0.1)] px-3 py-1.5 rounded-full flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      Done
                     </span>
-                  ) : isNext ? (
-                    <ImperialButton variant="primary" size="sm" onClick={() => onBegin(key)}>
+                  ) : allComplete ? (
+                    <span className="text-xs text-steel/50 px-3 py-1 rounded-full">—</span>
+                  ) : (
+                    <ImperialButton variant={isRecommended ? 'primary' : 'secondary'} size="sm" onClick={() => onBegin(key)}>
                       <span className="font-arabic">ابدأ</span>
                       <ChevronRight className="w-4 h-4 ml-1" />
                     </ImperialButton>
-                  ) : (
-                    <span className="text-xs text-steel/50 border border-steel/20 px-3 py-1 rounded-full flex items-center gap-1">
-                      <Lock className="w-3 h-3" />
-                      Locked
-                    </span>
                   )}
                 </div>
               </div>
@@ -309,10 +316,12 @@ function AssessmentContent() {
   const [moduleResults, setModuleResults] = useState({})
   const [placementResult, setPlacementResult] = useState(null)
   const [completedModules, setCompletedModules] = useState([])
+  const [moduleScores, setModuleScores] = useState({})
   const [user, setUser] = useState(null)
   const [authenticated, setAuthenticated] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [theme, setTheme] = useState(THEMES.male)
+  const [allComplete, setAllComplete] = useState(false)
 
   const handleAuthenticated = useCallback((u) => {
     setUser(u)
@@ -328,28 +337,88 @@ function AssessmentContent() {
 
   const goToStep = (step) => setCurrentStep(step)
 
+  // Check if all 4 trials are complete → trigger final results
+  const checkAllComplete = (completed, scores) => {
+    if (completed.length === 4 && TRIAL_ORDER.every(k => completed.includes(k))) {
+      setAllComplete(true)
+      // Short delay then show results
+      setTimeout(() => {
+        const finalScores = {
+          listening: scores.listening || 0,
+          vocabulary: scores.vocabulary || 0,
+          grammar: scores.grammar || 0,
+          speaking: scores.speaking || 0,
+        }
+        const result = calculatePlacement(finalScores)
+        setPlacementResult(result)
+        playLevelUp()
+
+        // Save to localStorage
+        const assessmentRecord = {
+          scores: finalScores,
+          result,
+          timestamp: new Date().toISOString(),
+          userId: user?.id,
+          email: user?.email,
+        }
+        try {
+          const existing = JSON.parse(localStorage.getItem(`assessments_${user?.id}`) || '[]')
+          existing.unshift(assessmentRecord)
+          localStorage.setItem(`assessments_${user?.id}`, JSON.stringify(existing.slice(0, 20)))
+        } catch {}
+
+        // Send to API
+        fetch('/api/assessment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(assessmentRecord),
+        }).catch(() => {})
+
+        goToStep('results')
+      }, 1500)
+    }
+  }
+
   const handleBeginTrial = (moduleKey) => {
     playTransition()
     goToStep(moduleKey)
   }
 
   const handleListeningComplete = (answers) => {
+    const score = scoreListening(answers)
     setModuleResults(prev => ({ ...prev, listening: answers }))
-    setCompletedModules(prev => [...prev, 'listening'])
+    setModuleScores(prev => ({ ...prev, listening: score }))
+    setCompletedModules(prev => {
+      const updated = [...prev, 'listening']
+      checkAllComplete(updated, { ...moduleScores, listening: score })
+      return updated
+    })
     playSuccess()
-    goToStep('intro') // Return to trial list
+    goToStep('intro')
   }
 
   const handleVocabularyComplete = (answers) => {
+    const score = scoreVocabulary(answers)
     setModuleResults(prev => ({ ...prev, vocabulary: answers }))
-    setCompletedModules(prev => [...prev, 'vocabulary'])
+    setModuleScores(prev => ({ ...prev, vocabulary: score }))
+    setCompletedModules(prev => {
+      const updated = [...prev, 'vocabulary']
+      checkAllComplete(updated, { ...moduleScores, vocabulary: score })
+      return updated
+    })
     playSuccess()
     goToStep('intro')
   }
 
   const handleGrammarComplete = (answers) => {
+    const score = scoreGrammar(answers)
     setModuleResults(prev => ({ ...prev, grammar: answers }))
-    setCompletedModules(prev => [...prev, 'grammar'])
+    setModuleScores(prev => ({ ...prev, grammar: score }))
+    setCompletedModules(prev => {
+      const updated = [...prev, 'grammar']
+      checkAllComplete(updated, { ...moduleScores, grammar: score })
+      return updated
+    })
     playSuccess()
     goToStep('intro')
   }
@@ -357,43 +426,18 @@ function AssessmentContent() {
   const handleSpeakingComplete = useCallback((recordings) => {
     const allResults = { ...moduleResults, speaking: recordings }
     setModuleResults(allResults)
+    const score = scoreSpeaking(recordings)
+    setModuleScores(prev => {
+      const updated = { ...prev, speaking: score }
+      // Check all complete with updated scores
+      const updatedCompleted = [...completedModules, 'speaking']
+      checkAllComplete(updatedCompleted, updated)
+      return updated
+    })
     setCompletedModules(prev => [...prev, 'speaking'])
-
-    // All trials complete — calculate scores
-    const scores = {
-      listening: scoreListening(allResults.listening || []),
-      vocabulary: scoreVocabulary(allResults.vocabulary || []),
-      grammar: scoreGrammar(allResults.grammar || []),
-      speaking: scoreSpeaking(allResults.speaking || []),
-    }
-
-    const result = calculatePlacement(scores)
-    setPlacementResult(result)
-    playLevelUp()
-
-    // Save to localStorage for persistent profile history
-    const assessmentRecord = {
-      scores,
-      result,
-      timestamp: new Date().toISOString(),
-      userId: user?.id,
-      email: user?.email,
-    }
-    try {
-      const existing = JSON.parse(localStorage.getItem(`assessments_${user?.id}`) || '[]')
-      existing.unshift(assessmentRecord) // newest first
-      localStorage.setItem(`assessments_${user?.id}`, JSON.stringify(existing.slice(0, 20))) // keep last 20
-    } catch {}
-
-    // Save results to API (Telegram notification + logging)
-    fetch('/api/assessment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(assessmentRecord),
-    }).catch(() => {})
-
-    goToStep('results')
-  }, [moduleResults, user])
+    playSuccess()
+    goToStep('intro')
+  }, [moduleResults, user, completedModules, moduleScores])
 
   // Auth gate
   if (!authenticated) {
@@ -500,9 +544,9 @@ function AssessmentContent() {
             <section className="relative z-10 px-4 py-4">
               <div className="max-w-2xl mx-auto">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm text-imperial-gold font-heading">Your Progress</span>
+                  <span className="text-sm text-imperial-gold font-heading font-arabic">تقدّمك</span>
                   <span className="text-xs text-steel">
-                    {completedModules.length}/{TRIAL_ORDER.length} trials complete
+                    {completedModules.length}/{TRIAL_ORDER.length} completed
                   </span>
                 </div>
                 {/* Progress bar */}
@@ -513,42 +557,42 @@ function AssessmentContent() {
                     transition={{ duration: 0.5 }}
                   />
                 </div>
+                {completedModules.length > 0 && completedModules.length < 4 && (
+                  <p className="text-xs text-muted-gold mt-2 text-center font-arabic">
+                    أكمل جميع التجارب الأربع للحصول على نتيجتك النهائية
+                  </p>
+                )}
               </div>
             </section>
 
-            {/* Sequential Trial List */}
+            {/* Trial List */}
             <section className="relative z-10 px-4 py-6">
-              <SequentialTrialList
+              <TrialList
                 completedModules={completedModules}
+                moduleScores={moduleScores}
                 onBegin={handleBeginTrial}
+                allComplete={allComplete}
               />
+
+              {/* All complete message */}
+              {allComplete && !placementResult && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-center mt-8"
+                >
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                  >
+                    <Crown className="w-8 h-8 text-imperial-gold mx-auto" />
+                  </motion.div>
+                  <p className="text-imperial-gold text-sm font-arabic mt-3">جاري حساب رتبتك الإمبراطورية...</p>
+                </motion.div>
+              )}
             </section>
 
             <SectionDivider />
-
-            {/* Journey Steps */}
-            <section className="relative z-10 px-4 py-8">
-              <div className="max-w-3xl mx-auto">
-                <div className="grid grid-cols-4 gap-4">
-                  {[
-                    { step: 1, title: 'استمع', icon: '👂', active: !completedModules.includes('listening') },
-                    { step: 2, title: 'اقرأ', icon: '📖', active: completedModules.includes('listening') && !completedModules.includes('vocabulary') },
-                    { step: 3, title: 'أجب', icon: '✍️', active: completedModules.includes('vocabulary') && !completedModules.includes('grammar') },
-                    { step: 4, title: 'تكلّم', icon: '🎙️', active: completedModules.includes('grammar') && !completedModules.includes('speaking') },
-                  ].map((item) => (
-                    <motion.div
-                      key={item.step}
-                      className={`text-center ${item.active ? '' : 'opacity-40'}`}
-                      animate={item.active ? { scale: [1, 1.05, 1] } : {}}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    >
-                      <div className="text-2xl mb-1">{item.icon}</div>
-                      <p className="text-xs text-parchment font-arabic">{item.title}</p>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            </section>
           </motion.div>
         )}
 
