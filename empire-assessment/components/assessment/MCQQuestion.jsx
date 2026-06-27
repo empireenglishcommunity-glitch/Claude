@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Clock, CheckCircle, XCircle } from 'lucide-react'
+import { playSelect, playConfirm, playTimerWarning } from '../../lib/sound-effects'
 
 const OPTION_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
 
@@ -64,11 +65,13 @@ export default function MCQQuestion({
   const handleSelect = (option) => {
     if (confirmed) return
     setSelected(option)
+    playSelect()
   }
 
   const handleConfirm = () => {
     if (!selected || confirmed) return
     setConfirmed(true)
+    playConfirm()
     clearInterval(timerRef.current)
 
     const elapsed = Math.round((Date.now() - startTime) / 1000)
@@ -91,6 +94,13 @@ export default function MCQQuestion({
   const timerIsWarning = timeLimit > 0 && timeLeft <= 10
   const timerIsCritical = timeLimit > 0 && timeLeft <= 5
   const timerPct = timeLimit > 0 ? (timeLeft / timeLimit) * 100 : 100
+
+  // Play warning sound at 10 seconds
+  useEffect(() => {
+    if (timeLimit > 0 && timeLeft === 10) {
+      playTimerWarning()
+    }
+  }, [timeLeft, timeLimit])
 
   // Determine option state for styling
   const getOptionState = (option, optionIndex) => {

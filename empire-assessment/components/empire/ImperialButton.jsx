@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { playClick } from '../../lib/sound-effects'
 
 export default function ImperialButton({ 
   variant = 'primary', 
@@ -36,7 +37,7 @@ export default function ImperialButton({
       `}
       whileHover={disabled ? undefined : { scale: 1.02 }}
       whileTap={disabled ? undefined : { scale: 0.98 }}
-      onClick={disabled ? undefined : onClick}
+      onClick={disabled ? undefined : (e) => { playClick(); onClick?.(e) }}
       disabled={disabled}
       {...props}
     >
