@@ -6,7 +6,7 @@ import { Swords, Headphones, BookOpen, Shield, ChevronRight, Crown, Lock, CheckC
 import { 
   ParticleBackground, MetallicCard, GlowingBorder, ImperialButton, SectionDivider,
   EmpireAudioProvider, EmpireAudioOverlay, EmpireAudioControls,
-  ProfileSidebar, detectGender, THEMES
+  ProfileSidebar, detectGender, THEMES, ProgressGuard, Footer
 } from '../components/empire'
 import ListeningModule from '../components/assessment/ListeningModule'
 import VocabularyModule from '../components/assessment/VocabularyModule'
@@ -311,6 +311,8 @@ function AssessmentContent() {
     const name = u.user_metadata?.name || u.email?.split('@')[0] || ''
     const gender = detectGender(name)
     setTheme(THEMES[gender])
+    // Apply theme to document
+    document.documentElement.setAttribute('data-theme', gender)
   }, [])
 
   const goToStep = (step) => setCurrentStep(step)
@@ -385,9 +387,10 @@ function AssessmentContent() {
   const isInTrial = currentStep !== 'intro' && currentStep !== 'results'
 
   return (
-    <div className="min-h-screen empire-bg" style={{ '--accent': theme.accent, '--accent-light': theme.accentLight }}>
+    <div className="min-h-screen empire-bg flex flex-col" data-theme={theme.id} style={{ '--accent': theme.accent, '--accent-light': theme.accentLight }}>
       <ParticleBackground count={30} />
       <EmpireAudioControls />
+      <ProgressGuard active={isInTrial} />
 
       {/* Profile Button (top-left) */}
       <button
@@ -610,6 +613,7 @@ export default function AssessmentPage() {
     <EmpireAudioProvider>
       <EmpireAudioOverlay />
       <AssessmentContent />
+      <Footer />
     </EmpireAudioProvider>
   )
 }

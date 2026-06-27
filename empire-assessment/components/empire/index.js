@@ -11,3 +11,5 @@ export { default as EmpireAudioProvider, useEmpireAudio } from './EmpireAudioPro
 export { default as EmpireAudioOverlay } from './EmpireAudioOverlay'
 export { default as EmpireAudioControls } from './EmpireAudioControls'
 export { default as ProfileSidebar, detectGender, THEMES } from './ProfileSidebar'
+export { default as ProgressGuard } from './ProgressGuard'
+export { default as Footer } from './Footer'
