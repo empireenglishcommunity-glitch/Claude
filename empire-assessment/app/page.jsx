@@ -15,6 +15,7 @@ import SpeakingModule from '../components/assessment/SpeakingModule'
 import AssessmentResults from '../components/assessment/AssessmentResults'
 import { scoreListening, scoreVocabulary, scoreGrammar, scoreSpeaking, calculatePlacement } from '../lib/scoring'
 import { supabase } from '../lib/supabase'
+import { initSounds, playClick, playTransition, playSuccess, playLevelUp } from '../lib/sound-effects'
 
 // ─── Sequential Trial Order (FIXED — no user choice) ─────
 
@@ -307,6 +308,7 @@ function AssessmentContent() {
   const handleAuthenticated = useCallback((u) => {
     setUser(u)
     setAuthenticated(true)
+    initSounds() // Initialize audio context after user interaction
     // Auto-detect theme from name
     const name = u.user_metadata?.name || u.email?.split('@')[0] || ''
     const gender = detectGender(name)
@@ -318,24 +320,28 @@ function AssessmentContent() {
   const goToStep = (step) => setCurrentStep(step)
 
   const handleBeginTrial = (moduleKey) => {
+    playTransition()
     goToStep(moduleKey)
   }
 
   const handleListeningComplete = (answers) => {
     setModuleResults(prev => ({ ...prev, listening: answers }))
     setCompletedModules(prev => [...prev, 'listening'])
+    playSuccess()
     goToStep('intro') // Return to trial list
   }
 
   const handleVocabularyComplete = (answers) => {
     setModuleResults(prev => ({ ...prev, vocabulary: answers }))
     setCompletedModules(prev => [...prev, 'vocabulary'])
+    playSuccess()
     goToStep('intro')
   }
 
   const handleGrammarComplete = (answers) => {
     setModuleResults(prev => ({ ...prev, grammar: answers }))
     setCompletedModules(prev => [...prev, 'grammar'])
+    playSuccess()
     goToStep('intro')
   }
 
@@ -354,6 +360,7 @@ function AssessmentContent() {
 
     const result = calculatePlacement(scores)
     setPlacementResult(result)
+    playLevelUp()
 
     // Save to localStorage for persistent profile history
     const assessmentRecord = {
