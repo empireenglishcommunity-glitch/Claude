@@ -1,15 +1,247 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&family=Cinzel:wght@400;600;700;900&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════
+   EMPIRE ENGLISH COMMUNITY — Imperial Design System
+   ═══════════════════════════════════════════════════════════ */
+
 html { scroll-behavior: smooth; }
+
 body {
   background-color: #0A0A0F;
   color: #F5F0E8;
   font-family: 'Inter', sans-serif;
 }
+
 ::selection {
   background-color: #D4AF37;
   color: #0A0A0F;
+}
+
+/* ─── Empire Background ─────────────────────────────────── */
+
+.empire-bg {
+  background: 
+    radial-gradient(ellipse at 20% 50%, rgba(212, 175, 55, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(205, 127, 50, 0.02) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 100%, rgba(26, 26, 46, 0.5) 0%, transparent 50%),
+    linear-gradient(180deg, #0A0A0F 0%, #0D1117 50%, #0A0A0F 100%);
+}
+
+/* ─── Gold Shimmer Text ─────────────────────────────────── */
+
+.gold-shimmer {
+  background: linear-gradient(
+    135deg,
+    #D4AF37 0%,
+    #e8d48b 25%,
+    #D4AF37 50%,
+    #cd7f32 75%,
+    #D4AF37 100%
+  );
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* ─── Text Glow ─────────────────────────────────────────── */
+
+.text-glow {
+  text-shadow: 0 0 20px rgba(212, 175, 55, 0.3), 0 0 40px rgba(212, 175, 55, 0.1);
+}
+
+.text-glow-strong {
+  text-shadow: 0 0 30px rgba(212, 175, 55, 0.5), 0 0 60px rgba(212, 175, 55, 0.2);
+}
+
+/* ─── Float Animation (for particles) ───────────────────── */
+
+@keyframes float {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.4;
+  }
+  90% {
+    opacity: 0.2;
+  }
+  100% {
+    transform: translateY(-100vh) translateX(20px);
+    opacity: 0;
+  }
+}
+
+/* ─── Pulse Glow Animation ──────────────────────────────── */
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(212, 175, 55, 0.2), 0 0 10px rgba(212, 175, 55, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.4), 0 0 30px rgba(212, 175, 55, 0.2);
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+/* ─── Border Glow ───────────────────────────────────────── */
+
+@keyframes border-glow {
+  0%, 100% {
+    border-color: rgba(212, 175, 55, 0.2);
+  }
+  50% {
+    border-color: rgba(212, 175, 55, 0.5);
+  }
+}
+
+.border-glow {
+  animation: border-glow 3s ease-in-out infinite;
+}
+
+/* ─── Scale In Animation ────────────────────────────────── */
+
+@keyframes scale-in {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.5s ease-out forwards;
+}
+
+/* ─── Slide Up Animation ────────────────────────────────── */
+
+@keyframes slide-up {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.6s ease-out forwards;
+}
+
+/* ─── Timer Pulse ───────────────────────────────────────── */
+
+@keyframes timer-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.timer-warning {
+  animation: timer-pulse 0.5s ease-in-out infinite;
+  color: #ff6b35;
+}
+
+/* ─── Metallic Sheen Hover ──────────────────────────────── */
+
+.metallic-sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.metallic-sheen::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 40%,
+    rgba(212, 175, 55, 0.05) 50%,
+    transparent 60%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.metallic-sheen:hover::after {
+  transform: translateX(100%);
+}
+
+/* ─── Option Selection States ───────────────────────────── */
+
+.option-idle {
+  border-color: rgba(13, 17, 23, 0.8);
+  background: rgba(13, 17, 23, 0.5);
+}
+
+.option-hover {
+  border-color: rgba(212, 175, 55, 0.3);
+  background: rgba(13, 17, 23, 0.8);
+}
+
+.option-selected {
+  border-color: rgba(212, 175, 55, 0.6);
+  background: rgba(212, 175, 55, 0.1);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.15), inset 0 0 5px rgba(212, 175, 55, 0.05);
+}
+
+.option-correct {
+  border-color: rgba(74, 222, 128, 0.6);
+  background: rgba(74, 222, 128, 0.1);
+}
+
+.option-incorrect {
+  border-color: rgba(231, 76, 60, 0.6);
+  background: rgba(231, 76, 60, 0.1);
+}
+
+/* ─── Scrollbar Styling ─────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0A0F;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.5);
+}
+
+/* ─── Utility Classes ───────────────────────────────────── */
+
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.glass-panel {
+  background: rgba(13, 17, 23, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(212, 175, 55, 0.1);
 }
