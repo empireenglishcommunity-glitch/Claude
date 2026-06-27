@@ -254,7 +254,23 @@ export default function ProfileSidebar({ user, isOpen, onClose, currentTheme, on
             </div>
 
             {/* Actions */}
-            <div className="p-6">
+            <div className="p-6 space-y-3">
+              {/* View Full Profile — primary action */}
+              <a href="/profile" className="block">
+                <button
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold text-sm transition-all"
+                  style={{ 
+                    backgroundColor: `${currentTheme?.accent || '#D4AF37'}15`,
+                    border: `1px solid ${currentTheme?.accent || '#D4AF37'}40`,
+                    color: currentTheme?.accent || '#D4AF37',
+                  }}
+                >
+                  <Award className="w-4 h-4" />
+                  <span className="font-arabic">عرض النتائج والسجل الكامل</span>
+                </button>
+              </a>
+
+              {/* Logout */}
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-all text-sm"
