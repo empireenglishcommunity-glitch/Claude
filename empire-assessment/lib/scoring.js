@@ -67,52 +67,32 @@ export function scoreGrammar(answers) {
 }
 
 /**
- * Speaking score based on actual recording quality.
- * Scores based on:
- * - Whether recordings exist and have real duration
- * - Minimum 5 seconds per part to count as "attempted"
- * - Duration relative to target indicates effort/fluency
+ * Speaking score from AI evaluation.
+ * Each recording gets evaluated by Gemini for pronunciation, fluency, coherence.
+ * The scores are averaged across all parts that were evaluated.
  * 
- * Returns: 0-100 score (0 if skipped/too short, scaled by actual performance)
- * Note: This is provisional — AI evaluation will override when available.
+ * recordings format: [{ part, scores: { pronunciation, fluency, coherence, overall } }]
+ * If scores are missing (evaluation failed), that part counts as 0.
  */
 export function scoreSpeaking(recordings) {
   if (!recordings || recordings.length === 0) return 0
 
-  // Expected durations per part (seconds)
-  const expectedDurations = [90, 60, 30] // read aloud, spontaneous, shadowing
-  const MIN_DURATION = 5 // minimum seconds to count as an attempt
-
   let totalScore = 0
-  let attemptedParts = 0
+  let evaluatedParts = 0
 
-  for (let i = 0; i < Math.min(recordings.length, 3); i++) {
-    const rec = recordings[i]
-    const duration = rec.duration || 0
-
-    // Skip if recording is too short (< 5 seconds = didn't actually speak)
-    if (duration < MIN_DURATION) {
-      continue
+  for (const rec of recordings) {
+    if (rec.scores && rec.scores.overall != null) {
+      totalScore += rec.scores.overall
+      evaluatedParts++
     }
-
-    attemptedParts++
-    const expected = expectedDurations[i] || 60
-
-    // Score based on how much of the expected time they spoke
-    // Speaking 80%+ of expected time = full marks for that part
-    // Speaking less = proportional score
-    const durationRatio = Math.min(1, duration / (expected * 0.8))
-    const partScore = durationRatio * 100
-
-    totalScore += partScore
   }
 
-  // If no parts were actually attempted (all skipped or < 5 seconds)
-  if (attemptedParts === 0) return 0
+  // If no parts were evaluated by AI, return 0
+  if (evaluatedParts === 0) return 0
 
-  // Average across attempted parts, scaled by how many parts they did
-  const avgScore = totalScore / 3 // Always divide by 3 (total parts) not attemptedParts
-  return Math.round(Math.min(100, avgScore))
+  // Average across all 3 expected parts (not just evaluated ones)
+  // This penalizes skipping parts
+  return Math.round(totalScore / 3)
 }
 
 /**
