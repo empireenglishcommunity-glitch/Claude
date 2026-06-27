@@ -1,17 +1,23 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Swords, Headphones, BookOpen, Shield, Mic, Volume2, ChevronRight, Crown } from 'lucide-react'
-import { ParticleBackground, MetallicCard, GlowingBorder, ImperialButton, SectionDivider } from '../../components/empire'
+import { Swords, Headphones, BookOpen, Shield, ChevronRight, Crown, Lock, CheckCircle, LogIn } from 'lucide-react'
+import { 
+  ParticleBackground, MetallicCard, GlowingBorder, ImperialButton, SectionDivider,
+  EmpireAudioProvider, EmpireAudioOverlay, EmpireAudioControls 
+} from '../../components/empire'
 import ListeningModule from '../../components/assessment/ListeningModule'
 import VocabularyModule from '../../components/assessment/VocabularyModule'
 import GrammarModule from '../../components/assessment/GrammarModule'
 import SpeakingModule from '../../components/assessment/SpeakingModule'
 import AssessmentResults from '../../components/assessment/AssessmentResults'
 import { scoreListening, scoreVocabulary, scoreGrammar, scoreSpeaking, calculatePlacement } from '../../lib/scoring'
+import { supabase } from '../../lib/supabase'
 
-// ─── Module Configuration ─────────────────────────────────
+// ─── Sequential Trial Order (FIXED — no user choice) ─────
+
+const TRIAL_ORDER = ['listening', 'vocabulary', 'grammar', 'speaking']
 
 const MODULES = {
   listening: {
@@ -21,9 +27,6 @@ const MODULES = {
     icon: Headphones,
     color: '#D4AF37',
     description: 'Demonstrate your ability to understand spoken English at varying speeds.',
-    trialDescription: 'Listen to passages at three speeds — Slow March, Steady Pace, and Battle Speed. Answer questions that test comprehension, inference, and detail recognition.',
-    requiresMic: false,
-    requiresAudio: true,
     questions: 15,
     duration: '10 min',
   },
@@ -34,9 +37,6 @@ const MODULES = {
     icon: BookOpen,
     color: '#cd7f32',
     description: 'Show the breadth of your lexical knowledge across frequency bands.',
-    trialDescription: 'Face 40 questions across five frequency bands — from Foundation Words to Elite Words. Each correct answer reveals the true breadth of your lexical command.',
-    requiresMic: false,
-    requiresAudio: false,
     questions: 40,
     duration: '10 min',
   },
@@ -47,9 +47,6 @@ const MODULES = {
     icon: Shield,
     color: '#ff6b35',
     description: 'Prove your mastery of the structural foundations of English.',
-    trialDescription: 'Complete sentences, identify errors, and transform structures across eight grammar topics. Tenses, conditionals, passive voice — master them all.',
-    requiresMic: false,
-    requiresAudio: false,
     questions: 25,
     duration: '10 min',
   },
@@ -60,142 +57,111 @@ const MODULES = {
     icon: Swords,
     color: '#e74c3c',
     description: 'Prove your spoken command of the language.',
-    trialDescription: 'Record responses to prompts that test your pronunciation, fluency, and confidence. Your voice reveals your true level.',
-    requiresMic: true,
-    requiresAudio: false,
     questions: 3,
     duration: '10 min',
   },
 }
 
-const STEPS = ['intro', 'listening', 'vocabulary', 'grammar', 'speaking', 'results']
+// ─── Auth Gate Component ─────────────────────────────────
 
-// ─── Animation Variants ──────────────────────────────────
+function AuthGate({ onAuthenticated }) {
+  const [checking, setChecking] = useState(true)
+  const [user, setUser] = useState(null)
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 40 },
-  visible: (i) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.15, duration: 0.6, ease: 'easeOut' },
-  }),
-}
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setUser(user)
+        onAuthenticated(user)
+      }
+      setChecking(false)
+    }
+    checkAuth()
 
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.2 },
-  },
-}
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setUser(session.user)
+        onAuthenticated(session.user)
+      } else {
+        setUser(null)
+      }
+    })
 
-// ─── Trial Card Component ────────────────────────────────
+    return () => subscription?.unsubscribe()
+  }, [onAuthenticated])
 
-function TrialCard({ moduleKey, data, index, isActive, isCompleted, onBegin }) {
-  const Icon = data.icon
-
-  return (
-    <motion.div
-      custom={index}
-      variants={fadeUp}
-      initial="hidden"
-      animate="visible"
-      className="h-full"
-    >
-      <MetallicCard
-        className={`p-6 sm:p-8 h-full flex flex-col ${isCompleted ? 'opacity-70' : ''}`}
-        hover={!isCompleted}
-        glowOnHover={!isCompleted}
-      >
-        {/* Header */}
-        <div className="flex items-start justify-between mb-5">
-          <div
-            className="w-14 h-14 rounded-full border-2 flex items-center justify-center"
-            style={{
-              borderColor: data.color,
-              boxShadow: `0 0 20px ${data.color}30, inset 0 0 12px ${data.color}15`,
-            }}
+  if (checking) {
+    return (
+      <div className="min-h-screen empire-bg flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center space-y-4"
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
           >
-            <Icon className="w-6 h-6" style={{ color: data.color }} />
-          </div>
-          <span
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs tracking-wider uppercase border
-              ${isCompleted 
-                ? 'text-[#4ade80] border-[rgba(74,222,128,0.3)] bg-[rgba(74,222,128,0.1)]' 
-                : 'text-imperial-gold border-[rgba(212,175,55,0.3)] bg-[rgba(212,175,55,0.1)]'
-              }`}
-          >
-            {isCompleted ? '✓ Completed' : 'Available'}
-          </span>
-        </div>
+            <Crown className="w-12 h-12 text-imperial-gold mx-auto" />
+          </motion.div>
+          <p className="text-muted-gold text-sm font-arabic">جارٍ التحقق من هويتك...</p>
+        </motion.div>
+      </div>
+    )
+  }
 
-        {/* Title */}
-        <h3 className="font-heading text-xl sm:text-2xl font-bold text-parchment mb-1">
-          {data.name}
-        </h3>
-        <span className="text-sm tracking-[0.12em] uppercase mb-3" style={{ color: data.color }}>
-          {data.empireTitle}
-        </span>
+  if (!user) {
+    return (
+      <div className="min-h-screen empire-bg flex items-center justify-center px-4">
+        <ParticleBackground count={20} />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative z-10 max-w-md w-full"
+        >
+          <GlowingBorder intensity="medium" className="rounded-lg">
+            <MetallicCard hover={false} glowOnHover={false} className="p-8 text-center">
+              {/* Logo */}
+              <img src="/logo-sm.png" alt="Empire English" className="w-16 h-16 mx-auto mb-4 object-contain" />
+              
+              <h2 className="font-heading text-2xl text-imperial-gold mb-2 font-arabic">
+                سجّل دخولك أولاً
+              </h2>
+              <p className="text-muted-gold text-sm mb-6 font-arabic leading-relaxed">
+                يجب تسجيل الدخول لبدء التجارب الأربع. نتائجك ستُحفظ في ملفك الشخصي.
+              </p>
 
-        {/* Description */}
-        <p className="text-steel text-sm leading-relaxed mb-4">
-          {data.description}
-        </p>
+              <div className="space-y-3">
+                <a href="/login" className="block">
+                  <ImperialButton variant="primary" size="lg" className="w-full">
+                    <LogIn className="w-5 h-5 mr-2" />
+                    <span className="font-arabic">تسجيل الدخول</span>
+                  </ImperialButton>
+                </a>
+                <a href="/signup" className="block">
+                  <ImperialButton variant="outline" size="md" className="w-full">
+                    <span className="font-arabic">إنشاء حساب جديد</span>
+                  </ImperialButton>
+                </a>
+              </div>
 
-        {/* Trial Details Box */}
-        <div className="bg-[rgba(10,10,15,0.5)] rounded-md p-4 mb-4 border border-[rgba(212,175,55,0.1)]">
-          <p className="text-muted-gold text-xs leading-relaxed italic">
-            {data.trialDescription}
-          </p>
-        </div>
+              <p className="text-steel text-xs mt-4 font-arabic">
+                حسابك يتتبع تقدمك ويحفظ رتبتك الإمبراطورية
+              </p>
+            </MetallicCard>
+          </GlowingBorder>
+        </motion.div>
+      </div>
+    )
+  }
 
-        {/* Requirements */}
-        <div className="flex flex-wrap gap-2 mb-5">
-          {data.requiresMic && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] tracking-wider uppercase border border-[rgba(231,76,60,0.3)] text-ember bg-[rgba(231,76,60,0.08)]">
-              <Mic className="w-3 h-3" />
-              Microphone
-            </span>
-          )}
-          {data.requiresAudio && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] tracking-wider uppercase border border-[rgba(212,175,55,0.3)] text-imperial-gold bg-[rgba(212,175,55,0.08)]">
-              <Volume2 className="w-3 h-3" />
-              Audio
-            </span>
-          )}
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] tracking-wider uppercase border border-[rgba(139,145,154,0.3)] text-steel bg-[rgba(139,145,154,0.08)]">
-            {data.questions} Q • {data.duration}
-          </span>
-        </div>
-
-        <div className="mt-auto" />
-
-        {/* CTA */}
-        <div className="mt-4">
-          {isCompleted ? (
-            <ImperialButton variant="outline" size="md" className="w-full" disabled>
-              Trial Completed ✓
-            </ImperialButton>
-          ) : (
-            <GlowingBorder intensity={isActive ? 'high' : 'medium'} color={data.color === '#D4AF37' ? 'gold' : data.color === '#cd7f32' ? 'bronze' : 'fire'}>
-              <ImperialButton variant="primary" size="md" className="w-full" onClick={() => onBegin(moduleKey)}>
-                Begin Trial
-                <ChevronRight className="w-4 h-4 ml-2" />
-              </ImperialButton>
-            </GlowingBorder>
-          )}
-        </div>
-      </MetallicCard>
-    </motion.div>
-  )
+  return null // User is authenticated, parent handles rendering
 }
 
-// ─── Step Indicator (during trial) ───────────────────────
+// ─── Step Indicator (sequential progress) ────────────────
 
 function StepIndicator({ currentStep, completedModules }) {
-  const moduleKeys = ['listening', 'vocabulary', 'grammar', 'speaking']
-  const stepIndex = STEPS.indexOf(currentStep)
-
   return (
     <motion.div
       initial={{ y: -20, opacity: 0 }}
@@ -204,7 +170,7 @@ function StepIndicator({ currentStep, completedModules }) {
     >
       <div className="max-w-2xl mx-auto flex items-center justify-between">
         <div className="flex gap-2">
-          {moduleKeys.map((key) => {
+          {TRIAL_ORDER.map((key) => {
             const mod = MODULES[key]
             const Icon = mod.icon
             const isCompleted = completedModules.includes(key)
@@ -222,7 +188,7 @@ function StepIndicator({ currentStep, completedModules }) {
                 transition={{ duration: 2, repeat: Infinity }}
               >
                 {isCompleted ? (
-                  <span className="text-imperial-gold text-sm">✓</span>
+                  <CheckCircle className="w-4 h-4 text-imperial-gold" />
                 ) : (
                   <Icon className="w-4 h-4" style={{ color: isCurrent ? mod.color : '#8B919A' }} />
                 )}
@@ -243,13 +209,102 @@ function StepIndicator({ currentStep, completedModules }) {
   )
 }
 
+// ─── Sequential Trial List (locked/unlocked) ─────────────
+
+function SequentialTrialList({ completedModules, onBegin }) {
+  const nextTrial = TRIAL_ORDER.find(key => !completedModules.includes(key))
+
+  return (
+    <div className="space-y-4 max-w-2xl mx-auto">
+      {TRIAL_ORDER.map((key, index) => {
+        const mod = MODULES[key]
+        const Icon = mod.icon
+        const isCompleted = completedModules.includes(key)
+        const isNext = key === nextTrial
+        const isLocked = !isCompleted && !isNext
+
+        return (
+          <motion.div
+            key={key}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: index * 0.1 }}
+          >
+            <MetallicCard
+              className={`p-5 ${isLocked ? 'opacity-50' : ''}`}
+              hover={isNext}
+              glowOnHover={isNext}
+            >
+              <div className="flex items-center gap-4">
+                {/* Step number + icon */}
+                <div
+                  className="w-12 h-12 rounded-full border-2 flex items-center justify-center shrink-0"
+                  style={{
+                    borderColor: isCompleted ? '#4ade80' : isNext ? mod.color : '#8B919A30',
+                    backgroundColor: isCompleted ? 'rgba(74,222,128,0.1)' : isNext ? `${mod.color}10` : 'transparent',
+                  }}
+                >
+                  {isCompleted ? (
+                    <CheckCircle className="w-5 h-5 text-[#4ade80]" />
+                  ) : isLocked ? (
+                    <Lock className="w-5 h-5 text-steel/50" />
+                  ) : (
+                    <Icon className="w-5 h-5" style={{ color: mod.color }} />
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-parchment font-bold text-sm">{mod.name}</h3>
+                    <span className="text-xs text-muted-gold font-arabic">{mod.name_ar}</span>
+                  </div>
+                  <p className="text-steel text-xs mt-0.5">
+                    {mod.questions} questions • {mod.duration}
+                  </p>
+                </div>
+
+                {/* Status / Action */}
+                <div className="shrink-0">
+                  {isCompleted ? (
+                    <span className="text-xs text-[#4ade80] border border-[rgba(74,222,128,0.3)] bg-[rgba(74,222,128,0.1)] px-3 py-1 rounded-full">
+                      ✓ Complete
+                    </span>
+                  ) : isNext ? (
+                    <ImperialButton variant="primary" size="sm" onClick={() => onBegin(key)}>
+                      <span className="font-arabic">ابدأ</span>
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </ImperialButton>
+                  ) : (
+                    <span className="text-xs text-steel/50 border border-steel/20 px-3 py-1 rounded-full flex items-center gap-1">
+                      <Lock className="w-3 h-3" />
+                      Locked
+                    </span>
+                  )}
+                </div>
+              </div>
+            </MetallicCard>
+          </motion.div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ─── Main Assessment Page ────────────────────────────────
 
-export default function AssessmentPage() {
+function AssessmentContent() {
   const [currentStep, setCurrentStep] = useState('intro')
   const [moduleResults, setModuleResults] = useState({})
   const [placementResult, setPlacementResult] = useState(null)
   const [completedModules, setCompletedModules] = useState([])
+  const [user, setUser] = useState(null)
+  const [authenticated, setAuthenticated] = useState(false)
+
+  const handleAuthenticated = useCallback((u) => {
+    setUser(u)
+    setAuthenticated(true)
+  }, [])
 
   const goToStep = (step) => setCurrentStep(step)
 
@@ -260,19 +315,19 @@ export default function AssessmentPage() {
   const handleListeningComplete = (answers) => {
     setModuleResults(prev => ({ ...prev, listening: answers }))
     setCompletedModules(prev => [...prev, 'listening'])
-    goToStep('vocabulary')
+    goToStep('intro') // Return to trial list
   }
 
   const handleVocabularyComplete = (answers) => {
     setModuleResults(prev => ({ ...prev, vocabulary: answers }))
     setCompletedModules(prev => [...prev, 'vocabulary'])
-    goToStep('grammar')
+    goToStep('intro')
   }
 
   const handleGrammarComplete = (answers) => {
     setModuleResults(prev => ({ ...prev, grammar: answers }))
     setCompletedModules(prev => [...prev, 'grammar'])
-    goToStep('speaking')
+    goToStep('intro')
   }
 
   const handleSpeakingComplete = useCallback((recordings) => {
@@ -280,7 +335,7 @@ export default function AssessmentPage() {
     setModuleResults(allResults)
     setCompletedModules(prev => [...prev, 'speaking'])
 
-    // Calculate scores
+    // All trials complete — calculate scores
     const scores = {
       listening: scoreListening(allResults.listening || []),
       vocabulary: scoreVocabulary(allResults.vocabulary || []),
@@ -291,29 +346,41 @@ export default function AssessmentPage() {
     const result = calculatePlacement(scores)
     setPlacementResult(result)
 
-    // Save results
+    // Save results with user profile
     fetch('/api/assessment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scores, result, timestamp: new Date().toISOString() }),
+      body: JSON.stringify({ 
+        scores, 
+        result, 
+        userId: user?.id,
+        email: user?.email,
+        timestamp: new Date().toISOString() 
+      }),
     }).catch(() => {})
 
     goToStep('results')
-  }, [moduleResults])
+  }, [moduleResults, user])
+
+  // Auth gate
+  if (!authenticated) {
+    return <AuthGate onAuthenticated={handleAuthenticated} />
+  }
 
   const isInTrial = currentStep !== 'intro' && currentStep !== 'results'
 
   return (
     <div className="min-h-screen empire-bg">
       <ParticleBackground count={30} />
+      <EmpireAudioControls />
 
       {/* Step Indicator during trials */}
       {isInTrial && (
         <StepIndicator currentStep={currentStep} completedModules={completedModules} />
       )}
 
-      {/* ═══ INTRO: The Four Trials ═══ */}
       <AnimatePresence mode="wait">
+        {/* ═══ INTRO: Sequential Trial Hub ═══ */}
         {currentStep === 'intro' && (
           <motion.div
             key="intro"
@@ -322,163 +389,106 @@ export default function AssessmentPage() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.5 }}
           >
-            {/* Hero Section */}
-            <section className="relative flex flex-col items-center justify-center text-center px-4 pt-16 pb-12">
+            {/* Hero Section with Logo */}
+            <section className="relative flex flex-col items-center justify-center text-center px-4 pt-12 pb-8">
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.8, ease: 'easeOut' }}
                 className="relative z-10 max-w-4xl mx-auto"
               >
-                {/* Floating Crown */}
+                {/* Empire Logo */}
                 <motion.div
-                  className="mb-6"
-                  animate={{ y: [0, -8, 0] }}
+                  className="mb-5"
+                  animate={{ y: [0, -6, 0] }}
                   transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
                 >
-                  <Crown className="w-16 h-16 text-imperial-gold mx-auto" strokeWidth={1.5} />
+                  <img
+                    src="/logo.png"
+                    alt="Empire English Community"
+                    className="w-24 h-24 mx-auto object-contain"
+                  />
                 </motion.div>
 
-                <h1 className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-wider mb-4">
+                <h1 className="font-heading text-3xl sm:text-4xl md:text-5xl font-bold tracking-wider mb-3">
                   <span className="gold-shimmer">التجارب الأربع</span>
                 </h1>
-                <h2 className="font-heading text-lg sm:text-xl md:text-2xl text-muted-gold tracking-[0.15em] mb-4">
+                <h2 className="font-heading text-base sm:text-lg text-muted-gold tracking-[0.15em] mb-3">
                   The Four Trials
                 </h2>
-                <p className="text-steel text-base sm:text-lg italic max-w-2xl mx-auto font-arabic leading-relaxed">
-                  كل مجند يجب أن يواجه التجارب الأربع. كل تجربة تختبر جانبًا مختلفًا من إتقانك للغة الإنجليزية. أكمل الأربع لتحصل على رتبتك الإمبراطورية.
+                <p className="text-steel text-sm max-w-lg mx-auto font-arabic leading-relaxed">
+                  أكمل التجارب بالترتيب لتحصل على رتبتك الإمبراطورية. كل تجربة تفتح بعد إكمال السابقة.
                 </p>
+
+                {/* User badge */}
+                {user && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[rgba(212,175,55,0.2)] bg-[rgba(212,175,55,0.05)]"
+                  >
+                    <div className="w-2 h-2 rounded-full bg-[#4ade80]" />
+                    <span className="text-xs text-muted-gold">{user.email}</span>
+                  </motion.div>
+                )}
               </motion.div>
-
-              <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#0A0A0F] to-transparent" />
             </section>
 
             <SectionDivider />
 
-            {/* Narrative Quote */}
-            <section className="relative z-10 px-4 py-8">
-              <div className="max-w-3xl mx-auto">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.3 }}
-                  className="text-center"
-                >
-                  <p className="text-muted-gold text-base sm:text-lg leading-relaxed italic font-arabic">
-                    &ldquo;أثبت قيمتك. اربح رتبتك الإمبراطورية. الاختبار يأخذ ٣٠-٤٥ دقيقة.&rdquo;
-                  </p>
-                  <div className="mt-6 flex items-center justify-center gap-3">
-                    <div className="h-px w-12 bg-gradient-to-r from-transparent to-[rgba(212,175,55,0.4)]" />
-                    <span className="text-imperial-gold text-xs tracking-widest uppercase">
-                      Choose Your Trial
-                    </span>
-                    <div className="h-px w-12 bg-gradient-to-l from-transparent to-[rgba(212,175,55,0.4)]" />
-                  </div>
-                </motion.div>
+            {/* Progress Summary */}
+            <section className="relative z-10 px-4 py-4">
+              <div className="max-w-2xl mx-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm text-imperial-gold font-heading">Your Progress</span>
+                  <span className="text-xs text-steel">
+                    {completedModules.length}/{TRIAL_ORDER.length} trials complete
+                  </span>
+                </div>
+                {/* Progress bar */}
+                <div className="w-full h-2 bg-midnight-navy rounded-full overflow-hidden border border-[rgba(212,175,55,0.1)]">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-imperial-gold to-bronze rounded-full"
+                    animate={{ width: `${(completedModules.length / TRIAL_ORDER.length) * 100}%` }}
+                    transition={{ duration: 0.5 }}
+                  />
+                </div>
               </div>
             </section>
 
-            <SectionDivider />
-
-            {/* Trial Cards Grid */}
-            <section className="relative z-10 px-4 py-8">
-              <div className="max-w-6xl mx-auto">
-                <motion.div
-                  variants={staggerContainer}
-                  initial="hidden"
-                  animate="visible"
-                  className="grid grid-cols-1 md:grid-cols-2 gap-6"
-                >
-                  {Object.entries(MODULES).map(([key, data], i) => (
-                    <TrialCard
-                      key={key}
-                      moduleKey={key}
-                      data={data}
-                      index={i}
-                      isActive={i === 0}
-                      isCompleted={completedModules.includes(key)}
-                      onBegin={handleBeginTrial}
-                    />
-                  ))}
-                </motion.div>
-              </div>
+            {/* Sequential Trial List */}
+            <section className="relative z-10 px-4 py-6">
+              <SequentialTrialList
+                completedModules={completedModules}
+                onBegin={handleBeginTrial}
+              />
             </section>
 
             <SectionDivider />
 
             {/* Journey Steps */}
-            <section className="relative z-10 px-4 py-12">
-              <div className="max-w-4xl mx-auto">
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.6 }}
-                  className="text-center mb-10"
-                >
-                  <h2 className="font-heading text-2xl sm:text-3xl font-bold text-imperial-gold text-glow mb-3">
-                    رحلتك
-                  </h2>
-                  <p className="text-muted-gold text-sm italic font-arabic">
-                    مسارك عبر التجارب سيكشف رتبتك الحقيقية
-                  </p>
-                </motion.div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+            <section className="relative z-10 px-4 py-8">
+              <div className="max-w-3xl mx-auto">
+                <div className="grid grid-cols-4 gap-4">
                   {[
-                    { step: 1, title: 'اختر', titleEn: 'Choose', desc: 'اختر التجربة', icon: '⚔️' },
-                    { step: 2, title: 'واجه', titleEn: 'Endure', desc: 'أكمل التحديات', icon: '🛡️' },
-                    { step: 3, title: 'تأمل', titleEn: 'Reflect', desc: 'راجع أداءك', icon: '📜' },
-                    { step: 4, title: 'ارتقِ', titleEn: 'Ascend', desc: 'احصل على رتبتك', icon: '👑' },
-                  ].map((item, i) => (
+                    { step: 1, title: 'استمع', icon: '👂', active: !completedModules.includes('listening') },
+                    { step: 2, title: 'اقرأ', icon: '📖', active: completedModules.includes('listening') && !completedModules.includes('vocabulary') },
+                    { step: 3, title: 'أجب', icon: '✍️', active: completedModules.includes('vocabulary') && !completedModules.includes('grammar') },
+                    { step: 4, title: 'تكلّم', icon: '🎙️', active: completedModules.includes('grammar') && !completedModules.includes('speaking') },
+                  ].map((item) => (
                     <motion.div
                       key={item.step}
-                      custom={i}
-                      variants={fadeUp}
-                      initial="hidden"
-                      animate="visible"
-                      className="text-center"
+                      className={`text-center ${item.active ? '' : 'opacity-40'}`}
+                      animate={item.active ? { scale: [1, 1.05, 1] } : {}}
+                      transition={{ duration: 2, repeat: Infinity }}
                     >
-                      <div className="text-3xl mb-3">{item.icon}</div>
-                      <div className="text-imperial-gold text-xs tracking-widest mb-1">
-                        STEP {item.step}
-                      </div>
-                      <h3 className="text-parchment text-lg font-bold mb-1 font-arabic">
-                        {item.title}
-                      </h3>
-                      <p className="text-muted-gold text-xs italic font-arabic">
-                        {item.desc}
-                      </p>
+                      <div className="text-2xl mb-1">{item.icon}</div>
+                      <p className="text-xs text-parchment font-arabic">{item.title}</p>
                     </motion.div>
                   ))}
                 </div>
               </div>
-            </section>
-
-            <SectionDivider />
-
-            {/* Begin CTA */}
-            <section className="relative z-10 px-4 py-16">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 }}
-                className="max-w-2xl mx-auto text-center"
-              >
-                <GlowingBorder intensity="high" className="rounded-lg">
-                  <MetallicCard hover={false} glowOnHover={false} className="p-10 sm:p-14">
-                    <h2 className="font-heading text-2xl sm:text-3xl font-bold text-imperial-gold text-glow mb-4 font-arabic">
-                      مستعد لإثبات قيمتك؟
-                    </h2>
-                    <p className="text-muted-gold text-base italic mb-8 font-arabic">
-                      ابدأ بالتجربة الأولى — تجربة السمع. الإمبراطورية بانتظارك.
-                    </p>
-                    <ImperialButton variant="primary" size="xl" onClick={() => goToStep('listening')}>
-                      <span className="font-arabic">ابدأ التجارب</span>
-                      <ChevronRight className="w-5 h-5 ml-2" />
-                    </ImperialButton>
-                  </MetallicCard>
-                </GlowingBorder>
-              </motion.div>
             </section>
           </motion.div>
         )}
@@ -550,5 +560,16 @@ export default function AssessmentPage() {
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+// ─── Wrapped with Audio Provider ─────────────────────────
+
+export default function AssessmentPage() {
+  return (
+    <EmpireAudioProvider>
+      <EmpireAudioOverlay />
+      <AssessmentContent />
+    </EmpireAudioProvider>
   )
 }
