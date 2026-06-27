@@ -2,10 +2,11 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Swords, Headphones, BookOpen, Shield, ChevronRight, Crown, Lock, CheckCircle, LogIn } from 'lucide-react'
+import { Swords, Headphones, BookOpen, Shield, ChevronRight, Crown, Lock, CheckCircle, LogIn, User } from 'lucide-react'
 import { 
   ParticleBackground, MetallicCard, GlowingBorder, ImperialButton, SectionDivider,
-  EmpireAudioProvider, EmpireAudioOverlay, EmpireAudioControls 
+  EmpireAudioProvider, EmpireAudioOverlay, EmpireAudioControls,
+  ProfileSidebar, detectGender, THEMES
 } from '../components/empire'
 import ListeningModule from '../components/assessment/ListeningModule'
 import VocabularyModule from '../components/assessment/VocabularyModule'
@@ -300,10 +301,16 @@ function AssessmentContent() {
   const [completedModules, setCompletedModules] = useState([])
   const [user, setUser] = useState(null)
   const [authenticated, setAuthenticated] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [theme, setTheme] = useState(THEMES.male)
 
   const handleAuthenticated = useCallback((u) => {
     setUser(u)
     setAuthenticated(true)
+    // Auto-detect theme from name
+    const name = u.user_metadata?.name || u.email?.split('@')[0] || ''
+    const gender = detectGender(name)
+    setTheme(THEMES[gender])
   }, [])
 
   const goToStep = (step) => setCurrentStep(step)
@@ -370,9 +377,34 @@ function AssessmentContent() {
   const isInTrial = currentStep !== 'intro' && currentStep !== 'results'
 
   return (
-    <div className="min-h-screen empire-bg">
+    <div className="min-h-screen empire-bg" style={{ '--accent': theme.accent, '--accent-light': theme.accentLight }}>
       <ParticleBackground count={30} />
       <EmpireAudioControls />
+
+      {/* Profile Button (top-left) */}
+      <button
+        onClick={() => setSidebarOpen(true)}
+        className="fixed top-4 left-4 z-30 w-10 h-10 rounded-full border-2 flex items-center justify-center overflow-hidden transition-all hover:scale-105"
+        style={{ 
+          borderColor: theme.accent,
+          backgroundColor: `${theme.accent}15`,
+        }}
+      >
+        {user?.user_metadata?.avatar_url ? (
+          <img src={user.user_metadata.avatar_url} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <User className="w-5 h-5" style={{ color: theme.accent }} />
+        )}
+      </button>
+
+      {/* Profile Sidebar */}
+      <ProfileSidebar
+        user={user}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        currentTheme={theme}
+        onThemeChange={(themeId) => setTheme(THEMES[themeId])}
+      />
 
       {/* Step Indicator during trials */}
       {isInTrial && (
