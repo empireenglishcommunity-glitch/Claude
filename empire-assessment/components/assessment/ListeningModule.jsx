@@ -291,17 +291,17 @@ export default function ListeningModule({ onComplete }) {
             {/* Waveform - only shows when playing */}
             {isPlaying && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="flex items-center justify-center gap-0.5 mb-4 py-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex items-end justify-center gap-0.5 mb-4 py-2 h-8"
               >
                 {[...Array(40)].map((_, i) => (
                   <motion.div
                     key={i}
-                    className="w-1 rounded-full"
-                    style={{ backgroundColor: speedConfig.color }}
-                    animate={{ height: [3, 6 + Math.random() * 14, 3] }}
+                    className="w-1 rounded-full origin-bottom"
+                    style={{ backgroundColor: speedConfig.color, height: '100%' }}
+                    animate={{ scaleY: [0.15, 0.3 + Math.random() * 0.7, 0.15] }}
                     transition={{ duration: 0.4 + Math.random() * 0.4, repeat: Infinity, delay: i * 0.03 }}
                   />
                 ))}
