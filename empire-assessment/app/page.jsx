@@ -8,6 +8,7 @@ import {
   EmpireAudioProvider, EmpireAudioOverlay, EmpireAudioControls,
   ProfileSidebar, detectGender, THEMES, ProgressGuard, Footer
 } from '../components/empire'
+import { useEmpireAudio } from '../components/empire/EmpireAudioProvider'
 import ListeningModule from '../components/assessment/ListeningModule'
 import VocabularyModule from '../components/assessment/VocabularyModule'
 import GrammarModule from '../components/assessment/GrammarModule'
@@ -323,6 +324,9 @@ function AssessmentContent() {
   const [theme, setTheme] = useState(THEMES.male)
   const [allComplete, setAllComplete] = useState(false)
 
+  // Audio control — fade out during trials, fade in during hub/results
+  const { fadeOut: audioFadeOut, fadeIn: audioFadeIn } = useEmpireAudio()
+
   const handleAuthenticated = useCallback((u) => {
     setUser(u)
     setAuthenticated(true)
@@ -352,6 +356,7 @@ function AssessmentContent() {
         const result = calculatePlacement(finalScores)
         setPlacementResult(result)
         playLevelUp()
+        audioFadeIn(3000) // Music returns triumphantly for results
 
         // Save to localStorage
         const assessmentRecord = {
@@ -381,6 +386,7 @@ function AssessmentContent() {
 
   const handleBeginTrial = (moduleKey) => {
     playTransition()
+    audioFadeOut(1500) // Smooth fade out as trial begins
     goToStep(moduleKey)
   }
 
@@ -394,6 +400,7 @@ function AssessmentContent() {
       return updated
     })
     playSuccess()
+    audioFadeIn(2000) // Music resumes as user returns to hub
     goToStep('intro')
   }
 
@@ -407,6 +414,7 @@ function AssessmentContent() {
       return updated
     })
     playSuccess()
+    audioFadeIn(2000)
     goToStep('intro')
   }
 
@@ -420,6 +428,7 @@ function AssessmentContent() {
       return updated
     })
     playSuccess()
+    audioFadeIn(2000)
     goToStep('intro')
   }
 
@@ -429,15 +438,15 @@ function AssessmentContent() {
     const score = scoreSpeaking(recordings)
     setModuleScores(prev => {
       const updated = { ...prev, speaking: score }
-      // Check all complete with updated scores
       const updatedCompleted = [...completedModules, 'speaking']
       checkAllComplete(updatedCompleted, updated)
       return updated
     })
     setCompletedModules(prev => [...prev, 'speaking'])
     playSuccess()
+    audioFadeIn(2000) // Music resumes
     goToStep('intro')
-  }, [moduleResults, user, completedModules, moduleScores])
+  }, [moduleResults, user, completedModules, moduleScores, audioFadeIn])
 
   // Auth gate
   if (!authenticated) {

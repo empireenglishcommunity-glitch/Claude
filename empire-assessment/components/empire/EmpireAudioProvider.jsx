@@ -10,36 +10,25 @@ export function useEmpireAudio() {
   return ctx
 }
 
-// Fade-in utility
-function fadeInAudio(audio, targetVol, duration, onVolumeChange, intervalRef) {
-  const steps = 30
-  const stepTime = duration / steps
-  const volStep = targetVol / steps
-  let current = 0
-  audio.volume = 0
-
-  if (intervalRef.current) clearInterval(intervalRef.current)
-  intervalRef.current = setInterval(() => {
-    current += volStep
-    if (current >= targetVol) {
-      audio.volume = targetVol
-      onVolumeChange(targetVol)
-      if (intervalRef.current) clearInterval(intervalRef.current)
-      return
-    }
-    audio.volume = current
-    onVolumeChange(current)
-  }, stepTime)
-}
-
+/**
+ * EmpireAudioProvider — Intelligent background music management.
+ * 
+ * Behavior:
+ * - Shows activation overlay on first visit (browser autoplay policy)
+ * - Plays music during intro/hub and results pages
+ * - Automatically fades OUT when a trial begins (no distraction)
+ * - Automatically fades IN when returning to hub or reaching results
+ * - All transitions are smooth (no abrupt cuts)
+ * - No manual controls needed — fully automatic
+ */
 export default function EmpireAudioProvider({ children }) {
   const audioRef = useRef(null)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [isMuted, setIsMuted] = useState(false)
-  const [volume, setVolumeState] = useState(0.15)
+  const [volume, setVolumeState] = useState(0)
   const [isActivated, setIsActivated] = useState(false)
   const [showOverlay, setShowOverlay] = useState(true)
   const fadeIntervalRef = useRef(null)
+  const targetVolumeRef = useRef(0.12) // Default comfortable volume
 
   // Initialize audio element once
   useEffect(() => {
@@ -56,7 +45,41 @@ export default function EmpireAudioProvider({ children }) {
     }
   }, [])
 
-  // Activate audio (called from overlay)
+  // Smooth fade to a target volume
+  const fadeTo = useCallback((targetVol, duration = 2000) => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current)
+
+    const steps = 30
+    const stepTime = duration / steps
+    const currentVol = audio.volume
+    const diff = targetVol - currentVol
+    const volStep = diff / steps
+    let step = 0
+
+    fadeIntervalRef.current = setInterval(() => {
+      step++
+      const newVol = currentVol + volStep * step
+
+      if (step >= steps) {
+        audio.volume = targetVol
+        setVolumeState(targetVol)
+        if (targetVol === 0) {
+          audio.pause()
+          setIsPlaying(false)
+        }
+        if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current)
+        return
+      }
+
+      audio.volume = Math.max(0, Math.min(1, newVol))
+      setVolumeState(Math.max(0, Math.min(1, newVol)))
+    }, stepTime)
+  }, [])
+
+  // Activate audio (called from overlay — required by browser autoplay policy)
   const activate = useCallback(async () => {
     const audio = audioRef.current
     if (!audio) return
@@ -67,86 +90,57 @@ export default function EmpireAudioProvider({ children }) {
       setIsPlaying(true)
       setIsActivated(true)
       setShowOverlay(false)
-      fadeInAudio(audio, 0.15, 2500, setVolumeState, fadeIntervalRef)
+      // Smooth fade in
+      fadeTo(targetVolumeRef.current, 2500)
     } catch (err) {
       console.warn('Audio activation failed:', err)
       setShowOverlay(false)
       setIsActivated(true)
     }
-  }, [])
+  }, [fadeTo])
 
-  // Skip activation (enter silently)
+  // Skip activation (enter silently — no music at all)
   const skipActivation = useCallback(() => {
     setShowOverlay(false)
     setIsActivated(true)
+    // Mark as "user chose no music"
+    targetVolumeRef.current = 0
   }, [])
 
-  // Toggle mute
-  const toggleMute = useCallback(() => {
-    const audio = audioRef.current
-    if (!audio) return
+  // Fade out music (called when trial begins)
+  const fadeOut = useCallback((duration = 1500) => {
+    if (!isActivated || targetVolumeRef.current === 0) return
+    fadeTo(0, duration)
+  }, [isActivated, fadeTo])
 
-    if (isMuted) {
-      audio.muted = false
-      setIsMuted(false)
+  // Fade in music (called when returning to hub or reaching results)
+  const fadeIn = useCallback((duration = 2000) => {
+    const audio = audioRef.current
+    if (!audio || !isActivated || targetVolumeRef.current === 0) return
+
+    // Resume playback if paused
+    if (audio.paused) {
+      audio.volume = 0
+      audio.play().then(() => {
+        setIsPlaying(true)
+        fadeTo(targetVolumeRef.current, duration)
+      }).catch(() => {})
     } else {
-      audio.muted = true
-      setIsMuted(true)
+      fadeTo(targetVolumeRef.current, duration)
     }
-  }, [isMuted])
-
-  // Set volume
-  const setVolume = useCallback((v) => {
-    const audio = audioRef.current
-    if (!audio) return
-    const clamped = Math.max(0, Math.min(1, v))
-    audio.volume = clamped
-    setVolumeState(clamped)
-    if (clamped > 0 && isMuted) {
-      audio.muted = false
-      setIsMuted(false)
-    }
-  }, [isMuted])
-
-  // Fade out and pause
-  const fadeOut = useCallback(() => {
-    const audio = audioRef.current
-    if (!audio) return
-
-    const steps = 20
-    const stepTime = 50
-    const volStep = audio.volume / steps
-    let current = audio.volume
-
-    if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current)
-    fadeIntervalRef.current = setInterval(() => {
-      current -= volStep
-      if (current <= 0.01) {
-        audio.volume = 0
-        audio.pause()
-        setIsPlaying(false)
-        setVolumeState(0)
-        if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current)
-        return
-      }
-      audio.volume = current
-      setVolumeState(current)
-    }, stepTime)
-  }, [])
+  }, [isActivated, fadeTo])
 
   return (
     <EmpireAudioContext.Provider
       value={{
         isPlaying,
-        isMuted,
         volume,
         isActivated,
         showOverlay,
         activate,
         skipActivation,
-        toggleMute,
-        setVolume,
         fadeOut,
+        fadeIn,
       }}
     >
       {children}
