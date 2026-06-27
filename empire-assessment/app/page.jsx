@@ -6,7 +6,7 @@ import { Swords, Headphones, BookOpen, Shield, ChevronRight, Crown, Lock, CheckC
 import { 
   ParticleBackground, MetallicCard, GlowingBorder, ImperialButton, SectionDivider,
   EmpireAudioProvider, EmpireAudioOverlay, EmpireAudioControls,
-  ProfileSidebar, detectGender, THEMES, ProgressGuard, Footer
+  ProfileSidebar, detectGender, THEMES, ProgressGuard, Footer, TopNav
 } from '../components/empire'
 import { useEmpireAudio } from '../components/empire/EmpireAudioProvider'
 import ListeningModule from '../components/assessment/ListeningModule'
@@ -461,21 +461,8 @@ function AssessmentContent() {
       <EmpireAudioControls />
       <ProgressGuard active={isInTrial} />
 
-      {/* Profile Button (top-left) */}
-      <button
-        onClick={() => setSidebarOpen(true)}
-        className="fixed top-4 left-4 z-30 w-10 h-10 rounded-full border-2 flex items-center justify-center overflow-hidden transition-all hover:scale-105"
-        style={{ 
-          borderColor: theme.accent,
-          backgroundColor: `${theme.accent}15`,
-        }}
-      >
-        {user?.user_metadata?.avatar_url ? (
-          <img src={user.user_metadata.avatar_url} alt="" className="w-full h-full object-cover" />
-        ) : (
-          <User className="w-5 h-5" style={{ color: theme.accent }} />
-        )}
-      </button>
+      {/* Top Navigation — always visible */}
+      <TopNav user={user} onProfileClick={() => setSidebarOpen(true)} />
 
       {/* Profile Sidebar */}
       <ProfileSidebar
