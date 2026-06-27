@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Headphones, BookOpen, Shield, Swords, Crown, Star, Target, 
-  CheckCircle2, XCircle, Zap, ArrowRight, AlertTriangle 
+  CheckCircle2, XCircle, Zap, ArrowRight, AlertTriangle, User 
 } from 'lucide-react'
 import { 
   MetallicCard, GlowingBorder, ImperialButton, SectionDivider, 
@@ -88,15 +88,21 @@ export default function AssessmentResults({ result }) {
     setShowCeremony(true)
   }, [])
 
-  // Determine strengths and weaknesses
+  // Determine strengths and weaknesses based on SCORE PERFORMANCE
+  // A weakness is any module where the student scored below the average or below 50%
+  // A strength is any module scoring above average or above 70%
   const moduleScores = Object.entries(scores).map(([key, score]) => ({
     key,
     score,
     level: levels_by_module[key],
   }))
+  const avgScore = moduleScores.reduce((sum, m) => sum + m.score, 0) / moduleScores.length
   const sorted = [...moduleScores].sort((a, b) => b.score - a.score)
-  const strengths = sorted.filter(m => m.level >= level || m.score >= 60)
-  const weaknesses = sorted.filter(m => m.level < level && m.score < 60)
+  
+  // Weaknesses: below 50% OR significantly below average (15+ points below)
+  const weaknesses = sorted.filter(m => m.score < 50 || (m.score < avgScore - 15))
+  // Strengths: above 70% OR significantly above average
+  const strengths = sorted.filter(m => m.score >= 70 || (m.score >= avgScore + 10 && m.score >= 50))
 
   return (
     <div className="min-h-screen empire-bg relative">
@@ -537,19 +543,24 @@ export default function AssessmentResults({ result }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 4.5 }}
-              className="text-center pb-8"
+              className="text-center pb-8 space-y-4"
             >
               <GlowingBorder intensity="medium" className="rounded-lg inline-block">
-                <a href="/" className="block">
+                <a href="/profile" className="block">
                   <ImperialButton variant="primary" size="xl">
-                    <span className="font-arabic">ابدأ رحلتك الآن</span>
-                    <Crown className="w-5 h-5 ml-2" />
+                    <span className="font-arabic">عرض ملفي الشخصي</span>
+                    <User className="w-5 h-5 ml-2" />
                   </ImperialButton>
                 </a>
               </GlowingBorder>
-              <p className="text-steel text-xs font-arabic mt-4">
-                ستبدأ بـ {plan.first_week_tasks} مهام فقط في الأسبوع الأول، ثم تزيد تدريجيًا.
+              <p className="text-steel text-xs font-arabic">
+                نتائجك محفوظة في ملفك الشخصي ويمكنك الرجوع إليها في أي وقت.
               </p>
+              <div className="flex justify-center gap-3 mt-4">
+                <a href="/" className="text-muted-gold text-xs hover:text-imperial-gold transition-colors font-arabic">
+                  إعادة الاختبار
+                </a>
+              </div>
             </motion.section>
           </motion.div>
         )}
