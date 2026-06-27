@@ -67,18 +67,32 @@ export function scoreGrammar(answers) {
 }
 
 /**
- * Speaking score is assigned by AI evaluation or manual review.
- * For MVP: estimated from recording duration + basic metrics.
- * Returns a provisional score (can be overridden by founder).
+ * Speaking score from AI evaluation.
+ * Each recording gets evaluated by Gemini for pronunciation, fluency, coherence.
+ * The scores are averaged across all parts that were evaluated.
+ * 
+ * recordings format: [{ part, scores: { pronunciation, fluency, coherence, overall } }]
+ * If scores are missing (evaluation failed), that part counts as 0.
  */
 export function scoreSpeaking(recordings) {
-  // In the full version, this would call AI evaluation
-  // For now: if all 3 parts recorded, provisional score based on completion
-  if (!recordings || recordings.length === 0) return 10
-  if (recordings.length === 1) return 25
-  if (recordings.length === 2) return 40
-  // All 3 parts recorded = provisional L1 (pending AI eval)
-  return 50 
+  if (!recordings || recordings.length === 0) return 0
+
+  let totalScore = 0
+  let evaluatedParts = 0
+
+  for (const rec of recordings) {
+    if (rec.scores && rec.scores.overall != null) {
+      totalScore += rec.scores.overall
+      evaluatedParts++
+    }
+  }
+
+  // If no parts were evaluated by AI, return 0
+  if (evaluatedParts === 0) return 0
+
+  // Average across all 3 expected parts (not just evaluated ones)
+  // This penalizes skipping parts
+  return Math.round(totalScore / 3)
 }
 
 /**

@@ -19,8 +19,9 @@ export default function SpeakingModule({ onComplete }) {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [micError, setMicError] = useState(false)
-  const [phase, setPhase] = useState('ready') // 'ready' | 'recording' | 'done'
+  const [phase, setPhase] = useState('ready') // 'ready' | 'recording' | 'evaluating' | 'done'
   const [maxTime, setMaxTime] = useState(0)
+  const [evalResult, setEvalResult] = useState(null)
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
   const timerRef = useRef(null)
@@ -57,22 +58,71 @@ export default function SpeakingModule({ onComplete }) {
         if (e.data.size > 0) chunksRef.current.push(e.data)
       }
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-        const newRecordings = [...recordings, { part: step, blob, duration: recordingTime }]
-        setRecordings(newRecordings)
         stream.getTracks().forEach(t => t.stop())
+        setPhase('evaluating')
+
+        // Convert blob to base64 for AI evaluation
+        let scores = { pronunciation: 0, fluency: 0, coherence: 0, overall: 0 }
+        let feedback = ''
+
+        try {
+          const arrayBuffer = await blob.arrayBuffer()
+          const base64 = btoa(
+            new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+          )
+
+          // Determine expected text based on current part
+          let expectedText = ''
+          let partType = 'read_aloud'
+          if (step === 0) {
+            expectedText = currentPart.passage
+            partType = 'read_aloud'
+          } else if (step === 1) {
+            expectedText = currentPart.prompt
+            partType = 'spontaneous'
+          } else {
+            expectedText = currentPart.text_to_repeat
+            partType = 'shadowing'
+          }
+
+          // Send to AI evaluation
+          const response = await fetch('/api/evaluate-speaking', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              audioBase64: base64,
+              expectedText,
+              partType,
+              mimeType: 'audio/webm',
+            }),
+          })
+
+          const result = await response.json()
+          if (result.success && result.scores) {
+            scores = result.scores
+            feedback = result.feedback || ''
+          }
+        } catch (err) {
+          console.error('AI evaluation failed:', err)
+        }
+
+        const newRecordings = [...recordings, { part: step, blob, duration: recordingTime, scores, feedback }]
+        setRecordings(newRecordings)
+        setEvalResult({ scores, feedback })
         setPhase('done')
 
-        // Auto-advance after brief pause
+        // Auto-advance after showing result
         setTimeout(() => {
           if (step + 1 < totalSteps) {
             setStep(step + 1)
             setPhase('ready')
+            setEvalResult(null)
           } else {
             onComplete(newRecordings)
           }
-        }, 1500)
+        }, 3000)
       }
 
       mediaRecorder.start()
@@ -303,23 +353,65 @@ export default function SpeakingModule({ onComplete }) {
                 </p>
               )}
             </motion.div>
-          ) : phase === 'done' ? (
+          ) : phase === 'evaluating' ? (
             <motion.div
-              key="done"
+              key="evaluating"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               className="flex flex-col items-center gap-3"
             >
               <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                className="w-12 h-12 border-2 border-imperial-gold border-t-transparent rounded-full"
+              />
+              <p className="text-imperial-gold text-sm font-arabic">جاري تقييم نطقك بالذكاء الاصطناعي...</p>
+              <p className="text-steel text-xs">Analyzing pronunciation...</p>
+            </motion.div>
+          ) : phase === 'done' ? (
+            <motion.div
+              key="done"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="flex flex-col items-center gap-4 w-full max-w-xs"
+            >
+              <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: 'spring', stiffness: 200 }}
-                className="w-16 h-16 rounded-full bg-[rgba(74,222,128,0.1)] border-2 border-[#4ade80] flex items-center justify-center"
+                className="w-14 h-14 rounded-full bg-[rgba(74,222,128,0.1)] border-2 border-[#4ade80] flex items-center justify-center"
               >
-                <span className="text-2xl">✓</span>
+                <span className="text-xl">✓</span>
               </motion.div>
-              <p className="text-[#4ade80] text-sm font-arabic">تم التسجيل بنجاح!</p>
+
+              {/* AI Evaluation Result */}
+              {evalResult && evalResult.scores && (
+                <div className="w-full space-y-2 bg-[rgba(10,10,15,0.6)] rounded-lg p-4 border border-[rgba(212,175,55,0.1)]">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-steel">Pronunciation</span>
+                    <span className="text-imperial-gold font-bold">{evalResult.scores.pronunciation}%</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-steel">Fluency</span>
+                    <span className="text-imperial-gold font-bold">{evalResult.scores.fluency}%</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-steel">Coherence</span>
+                    <span className="text-imperial-gold font-bold">{evalResult.scores.coherence}%</span>
+                  </div>
+                  <div className="h-px bg-[rgba(212,175,55,0.15)] my-1" />
+                  <div className="flex justify-between text-sm">
+                    <span className="text-parchment font-bold">Overall</span>
+                    <span className="text-imperial-gold font-bold">{evalResult.scores.overall}%</span>
+                  </div>
+                  {evalResult.feedback && (
+                    <p className="text-muted-gold text-xs font-arabic mt-2 text-center">{evalResult.feedback}</p>
+                  )}
+                </div>
+              )}
+
               <p className="text-steel text-xs">
                 Duration: {formatTime(recordingTime)}
               </p>
