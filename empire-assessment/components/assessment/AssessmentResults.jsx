@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Headphones, BookOpen, Shield, Swords, Crown, Star, Target, 
-  CheckCircle2, XCircle, Zap, ArrowRight, AlertTriangle, User 
+  CheckCircle2, XCircle, Zap, ArrowRight, AlertTriangle, User,
+  Download, Share2, TrendingUp, TrendingDown
 } from 'lucide-react'
 import { 
   MetallicCard, GlowingBorder, ImperialButton, SectionDivider, 
@@ -12,6 +13,8 @@ import {
 } from '../empire'
 import { getStudyPlan } from '../../lib/scoring'
 import { IMPERIAL_RANKS, IMPERIAL_RANK_DESCRIPTIONS, IMPERIAL_TRAINING_PATHS } from '../../lib/scoring-engine'
+import { generateRankCard, generateCertificate, downloadImage, shareImage } from '../../lib/certificate-generator'
+import { getRetakeComparison, formatDiff } from '../../lib/retake-comparison'
 
 // ─── Module Display Config ──────────────────────────────────
 
@@ -73,7 +76,7 @@ const planVariants = {
 
 // ─── Main Results Component ──────────────────────────────
 
-export default function AssessmentResults({ result }) {
+export default function AssessmentResults({ result, user }) {
   const { level, levels_by_module, scores, flag, flag_reason, level_info } = result
   const plan = getStudyPlan(level)
 
@@ -82,6 +85,10 @@ export default function AssessmentResults({ result }) {
 
   const rankConfig = IMPERIAL_RANKS[level] || IMPERIAL_RANKS.L0
   const rankColor = LEVEL_COLORS[level] || '#8b7355'
+  const studentName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Student'
+
+  // Retake comparison
+  const { comparison } = getRetakeComparison(user?.id, scores)
 
   const handleCelebrationComplete = useCallback(() => {
     setShowCelebration(false)
@@ -534,6 +541,84 @@ export default function AssessmentResults({ result }) {
                   ))}
                 </ul>
               </MetallicCard>
+            </motion.section>
+
+            <SectionDivider />
+
+            {/* ═══ Retake Comparison ═══ */}
+            {comparison && (
+              <motion.section
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 4.0 }}
+                className="space-y-4"
+              >
+                <div className="flex items-center gap-2">
+                  {comparison.improved ? <TrendingUp className="w-5 h-5 text-[#4ade80]" /> : <TrendingDown className="w-5 h-5 text-[#ef4444]" />}
+                  <h2 className="font-heading text-xl font-arabic" style={{ color: comparison.improved ? '#4ade80' : '#ef4444' }}>
+                    {comparison.improved ? 'تحسن منذ آخر اختبار!' : 'مقارنة بآخر اختبار'}
+                  </h2>
+                </div>
+                <MetallicCard className="p-5">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-center">
+                    {[
+                      { label: 'Listening', diff: comparison.listening },
+                      { label: 'Vocabulary', diff: comparison.vocabulary },
+                      { label: 'Grammar', diff: comparison.grammar },
+                      { label: 'Speaking', diff: comparison.speaking },
+                      { label: 'Overall', diff: comparison.overall },
+                    ].map((item) => {
+                      const f = formatDiff(item.diff)
+                      return (
+                        <div key={item.label}>
+                          <p className="text-xs text-steel">{item.label}</p>
+                          <p className="text-lg font-bold" style={{ color: f.color }}>{f.text}</p>
+                          <span className="text-sm">{f.emoji}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <p className="text-center text-xs text-muted-gold mt-3">
+                    Compared to {new Date(comparison.previousDate).toLocaleDateString('ar-EG')} ({IMPERIAL_RANKS[comparison.previousLevel]?.name})
+                  </p>
+                </MetallicCard>
+              </motion.section>
+            )}
+
+            <SectionDivider />
+
+            {/* ═══ Share & Download ═══ */}
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 4.3 }}
+              className="space-y-4"
+            >
+              <h2 className="font-heading text-xl text-imperial-gold text-center font-arabic">شارك إنجازك</h2>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <ImperialButton
+                  variant="secondary"
+                  size="md"
+                  onClick={() => {
+                    const card = generateRankCard(studentName, level, scores)
+                    shareImage(card, 'Empire English — My Rank', `I achieved ${rankConfig.name} rank!`)
+                  }}
+                >
+                  <Share2 className="w-4 h-4 mr-2" />
+                  <span className="font-arabic">شارك بطاقة الرتبة</span>
+                </ImperialButton>
+                <ImperialButton
+                  variant="outline"
+                  size="md"
+                  onClick={() => {
+                    const cert = generateCertificate(studentName, level, scores)
+                    downloadImage(cert, `empire-certificate-${level}.png`)
+                  }}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  <span className="font-arabic">تحميل الشهادة</span>
+                </ImperialButton>
+              </div>
             </motion.section>
 
             <SectionDivider />
