@@ -605,7 +605,7 @@ function AssessmentContent() {
             transition={{ duration: 0.6 }}
             className="relative z-10"
           >
-            <AssessmentResults result={placementResult} />
+            <AssessmentResults result={placementResult} user={user} />
           </motion.div>
         )}
       </AnimatePresence>
