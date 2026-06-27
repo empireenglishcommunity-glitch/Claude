@@ -72,10 +72,19 @@ function AuthGate({ onAuthenticated }) {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        setUser(user)
-        onAuthenticated(user)
+      // Try session first (fast, from localStorage)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        setUser(session.user)
+        onAuthenticated(session.user)
+        setChecking(false)
+        return
+      }
+      // Fallback to getUser (network call)
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (authUser) {
+        setUser(authUser)
+        onAuthenticated(authUser)
       }
       setChecking(false)
     }
