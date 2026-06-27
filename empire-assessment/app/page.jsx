@@ -353,17 +353,25 @@ function AssessmentContent() {
     const result = calculatePlacement(scores)
     setPlacementResult(result)
 
-    // Save results with user profile
+    // Save to localStorage for persistent profile history
+    const assessmentRecord = {
+      scores,
+      result,
+      timestamp: new Date().toISOString(),
+      userId: user?.id,
+      email: user?.email,
+    }
+    try {
+      const existing = JSON.parse(localStorage.getItem(`assessments_${user?.id}`) || '[]')
+      existing.unshift(assessmentRecord) // newest first
+      localStorage.setItem(`assessments_${user?.id}`, JSON.stringify(existing.slice(0, 20))) // keep last 20
+    } catch {}
+
+    // Save results to API (Telegram notification + logging)
     fetch('/api/assessment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        scores, 
-        result, 
-        userId: user?.id,
-        email: user?.email,
-        timestamp: new Date().toISOString() 
-      }),
+      body: JSON.stringify(assessmentRecord),
     }).catch(() => {})
 
     goToStep('results')
