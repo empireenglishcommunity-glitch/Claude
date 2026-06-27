@@ -16,21 +16,48 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        window.location.href = '/login'
-        return
+      // Use getSession first (reads from localStorage, no network call)
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (session?.user) {
+        setUser(session.user)
+        // Load assessment history
+        const saved = localStorage.getItem(`assessments_${session.user.id}`)
+        if (saved) {
+          try { setAssessments(JSON.parse(saved)) } catch {}
+        }
+        setLoading(false)
+      } else {
+        // No session — try getUser as fallback (network call)
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        if (authUser) {
+          setUser(authUser)
+          const saved = localStorage.getItem(`assessments_${authUser.id}`)
+          if (saved) {
+            try { setAssessments(JSON.parse(saved)) } catch {}
+          }
+          setLoading(false)
+        } else {
+          // Truly not authenticated — redirect to login
+          window.location.href = '/login?redirect=/profile'
+        }
       }
-      setUser(user)
-
-      // Load assessment history from localStorage (persists across sessions)
-      const saved = localStorage.getItem(`assessments_${user.id}`)
-      if (saved) {
-        try { setAssessments(JSON.parse(saved)) } catch {}
-      }
-      setLoading(false)
     }
     init()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setUser(session.user)
+        const saved = localStorage.getItem(`assessments_${session.user.id}`)
+        if (saved) {
+          try { setAssessments(JSON.parse(saved)) } catch {}
+        }
+        setLoading(false)
+      }
+    })
+
+    return () => subscription?.unsubscribe()
   }, [])
 
   if (loading) {

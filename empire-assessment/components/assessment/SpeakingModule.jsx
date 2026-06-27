@@ -68,44 +68,74 @@ export default function SpeakingModule({ onComplete }) {
         let feedback = ''
 
         try {
-          const arrayBuffer = await blob.arrayBuffer()
-          const base64 = btoa(
-            new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-          )
-
-          // Determine expected text based on current part
-          let expectedText = ''
-          let partType = 'read_aloud'
-          if (step === 0) {
-            expectedText = currentPart.passage
-            partType = 'read_aloud'
-          } else if (step === 1) {
-            expectedText = currentPart.prompt
-            partType = 'spontaneous'
-          } else {
-            expectedText = currentPart.text_to_repeat
-            partType = 'shadowing'
-          }
-
-          // Send to AI evaluation
-          const response = await fetch('/api/evaluate-speaking', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              audioBase64: base64,
-              expectedText,
-              partType,
-              mimeType: 'audio/webm',
-            }),
+          // Use FileReader for reliable base64 conversion (handles large blobs)
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onloadend = () => {
+              // reader.result is "data:audio/webm;base64,XXXX" — extract just the base64 part
+              const result = reader.result
+              const base64Data = result.split(',')[1]
+              resolve(base64Data)
+            }
+            reader.onerror = reject
+            reader.readAsDataURL(blob)
           })
 
-          const result = await response.json()
-          if (result.success && result.scores) {
-            scores = result.scores
-            feedback = result.feedback || ''
+          // Check size — Vercel has 4.5MB body limit
+          // Base64 is ~33% larger than binary, so ~3.3MB audio max
+          if (base64.length > 4000000) {
+            console.warn('Audio too large for API evaluation:', base64.length)
+            // Give provisional score based on duration (better than 0)
+            const provisionalScore = Math.min(40, Math.round((recordingTime / (currentPart.duration_seconds * 0.8)) * 40))
+            scores = { pronunciation: provisionalScore, fluency: provisionalScore, coherence: provisionalScore, overall: provisionalScore }
+            feedback = 'التسجيل طويل جداً للتقييم التلقائي. تم إعطاء درجة مؤقتة.'
+          } else {
+            // Determine expected text based on current part
+            let expectedText = ''
+            let partType = 'read_aloud'
+            if (step === 0) {
+              expectedText = currentPart.passage
+              partType = 'read_aloud'
+            } else if (step === 1) {
+              expectedText = currentPart.prompt
+              partType = 'spontaneous'
+            } else {
+              expectedText = currentPart.text_to_repeat
+              partType = 'shadowing'
+            }
+
+            // Send to AI evaluation
+            const response = await fetch('/api/evaluate-speaking', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                audioBase64: base64,
+                expectedText,
+                partType,
+                mimeType: 'audio/webm',
+              }),
+            })
+
+            const result = await response.json()
+            if (result.success && result.scores) {
+              scores = result.scores
+              feedback = result.feedback || ''
+            }
+
+            // If API returned all zeros but we have a recording, give minimum provisional score
+            if (scores.overall === 0 && recordingTime >= 5 && !result.fallback) {
+              scores = { pronunciation: 15, fluency: 15, coherence: 15, overall: 15 }
+              feedback = feedback || 'لم يتمكن النظام من تحليل الصوت بدقة. تم إعطاء درجة مؤقتة.'
+            }
           }
         } catch (err) {
           console.error('AI evaluation failed:', err)
+          // Provisional score based on recording duration (at least they tried)
+          if (recordingTime >= 5) {
+            const provisionalScore = Math.min(30, Math.round((recordingTime / (currentPart.duration_seconds * 0.8)) * 30))
+            scores = { pronunciation: provisionalScore, fluency: provisionalScore, coherence: provisionalScore, overall: provisionalScore }
+            feedback = 'حدث خطأ في التقييم. تم إعطاء درجة مؤقتة بناءً على مدة التسجيل.'
+          }
         }
 
         const newRecordings = [...recordings, { part: step, blob, duration: recordingTime, scores, feedback }]

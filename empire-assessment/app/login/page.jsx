@@ -23,7 +23,10 @@ export default function Login() {
         ? 'البريد أو كلمة المرور غير صحيحة'
         : error.message)
     } else {
-      window.location.href = '/'
+      // Check for redirect param
+      const params = new URLSearchParams(window.location.search)
+      const redirect = params.get('redirect') || '/'
+      window.location.href = redirect
     }
     setLoading(false)
   }
