@@ -1,0 +1,28 @@
+{
+  "name": "PC Agent — Task Queue",
+  "settings": {"executionOrder": "v1"},
+  "nodes": [
+    {"id":"trigger1","name":"Receive Task","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[250,300],"parameters":{"path":"pc-agent-task","httpMethod":"POST","responseMode":"responseNode","options":{}},"webhookId":"pc-task-queue"},
+    {"id":"code1","name":"Queue Task","type":"n8n-nodes-base.code","typeVersion":2,"position":[450,300],"parameters":{"jsCode":"const staticData = $getWorkflowStaticData('global');\nif (!staticData.tasks) staticData.tasks = [];\nconst task = {id: Date.now().toString(), task: $input.first().json.body?.task || 'health', params: $input.first().json.body?.params || {}, created: new Date().toISOString(), status: 'pending'};\nstaticData.tasks.push(task);\nreturn [{json: {success: true, task_id: task.id}}];"}},
+    {"id":"respond1","name":"Respond","type":"n8n-nodes-base.respondToWebhook","typeVersion":1.1,"position":[650,300],"parameters":{"respondWith":"json","responseBody":"={{ $json }}"}},
+    {"id":"trigger2","name":"PC Polls","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[250,500],"parameters":{"path":"pc-agent-poll","httpMethod":"GET","responseMode":"responseNode","options":{}},"webhookId":"pc-poll"},
+    {"id":"code2","name":"Get Pending","type":"n8n-nodes-base.code","typeVersion":2,"position":[450,500],"parameters":{"jsCode":"const staticData = $getWorkflowStaticData('global');\nif (!staticData.tasks) staticData.tasks = [];\nconst pending = staticData.tasks.filter(t => t.status === 'pending');\npending.forEach(t => t.status = 'dispatched');\nreturn [{json: {tasks: pending}}];"}},
+    {"id":"respond2","name":"Respond Poll","type":"n8n-nodes-base.respondToWebhook","typeVersion":1.1,"position":[650,500],"parameters":{"respondWith":"json","responseBody":"={{ $json }}"}},
+    {"id":"trigger3","name":"PC Result","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[250,700],"parameters":{"path":"pc-agent-result","httpMethod":"POST","responseMode":"responseNode","options":{}},"webhookId":"pc-result"},
+    {"id":"code3","name":"Store Result","type":"n8n-nodes-base.code","typeVersion":2,"position":[450,700],"parameters":{"jsCode":"const staticData = $getWorkflowStaticData('global');\nif (!staticData.results) staticData.results = [];\nconst body = $input.first().json.body || {};\nstaticData.results.push({task_id: body.task_id, result: body.result, time: new Date().toISOString()});\nstaticData.results = staticData.results.slice(-20);\nconst task = (staticData.tasks||[]).find(t => t.id === body.task_id);\nif (task) task.status = 'completed';\nreturn [{json: {success: true}}];"}},
+    {"id":"respond3","name":"Respond OK","type":"n8n-nodes-base.respondToWebhook","typeVersion":1.1,"position":[650,700],"parameters":{"respondWith":"json","responseBody":"={{ $json }}"}},
+    {"id":"trigger4","name":"Get Results","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[250,900],"parameters":{"path":"pc-agent-results","httpMethod":"GET","responseMode":"responseNode","options":{}},"webhookId":"pc-results"},
+    {"id":"code4","name":"Return Results","type":"n8n-nodes-base.code","typeVersion":2,"position":[450,900],"parameters":{"jsCode":"const staticData = $getWorkflowStaticData('global');\nreturn [{json: {results: (staticData.results || []).slice(-10)}}];"}},
+    {"id":"respond4","name":"Respond Results","type":"n8n-nodes-base.respondToWebhook","typeVersion":1.1,"position":[650,900],"parameters":{"respondWith":"json","responseBody":"={{ $json }}"}}
+  ],
+  "connections": {
+    "Receive Task":{"main":[[{"node":"Queue Task","type":"main","index":0}]]},
+    "Queue Task":{"main":[[{"node":"Respond","type":"main","index":0}]]},
+    "PC Polls":{"main":[[{"node":"Get Pending","type":"main","index":0}]]},
+    "Get Pending":{"main":[[{"node":"Respond Poll","type":"main","index":0}]]},
+    "PC Result":{"main":[[{"node":"Store Result","type":"main","index":0}]]},
+    "Store Result":{"main":[[{"node":"Respond OK","type":"main","index":0}]]},
+    "Get Results":{"main":[[{"node":"Return Results","type":"main","index":0}]]},
+    "Return Results":{"main":[[{"node":"Respond Results","type":"main","index":0}]]}
+  }
+}
