@@ -92,7 +92,8 @@ TASKS = {
 
 def poll():
     try:
-        r = urllib.request.urlopen(POLL_URL, timeout=15)
+        req = urllib.request.Request(POLL_URL, headers={"User-Agent": "EmpireAgent/1.0"})
+        r = urllib.request.urlopen(req, timeout=15)
         data = json.loads(r.read())
         return data.get("tasks", [])
     except:
@@ -101,7 +102,7 @@ def poll():
 def report(task_id, result):
     try:
         body = json.dumps({"task_id": task_id, "result": result}).encode()
-        req = urllib.request.Request(RESULT_URL, data=body, headers={"Content-Type": "application/json"})
+        req = urllib.request.Request(RESULT_URL, data=body, headers={"Content-Type": "application/json", "User-Agent": "EmpireAgent/1.0"})
         urllib.request.urlopen(req, timeout=15)
     except Exception as e:
         print(f"  Report failed: {e}")
